@@ -185,3 +185,48 @@ cc_fuzz {
         "fuzzers/llcp/*.cc",
     ],
 }
+
+genrule {
+    name: "NfcGeneratedPackets_rust",
+    tools: [
+        "bluetooth_packetgen",
+    ],
+    cmd: "$(location bluetooth_packetgen) --include=system/nfc/src --out=$(genDir) $(in) --rust",
+    srcs: [
+        "nci_packets.pdl",
+    ],
+    out: [
+        "nci_packets.rs",
+    ],
+}
+
+rust_library {
+    name: "libnfc_packets",
+    defaults: ["nfc_rust_defaults"],
+    crate_name: "nfc_packets",
+    srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
+    edition: "2018",
+    host_supported: true,
+    proc_macros: ["libnum_derive"],
+    rustlibs: [
+        "libbytes",
+        "libnum_traits",
+        "libthiserror",
+        "liblog_rust",
+    ],
+}
+
+rust_test_host {
+    name: "libnfc_packets_test",
+    defaults: ["nfc_rust_defaults"],
+    srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
+    test_suites: ["general-tests"],
+    edition: "2018",
+    proc_macros: ["libnum_derive"],
+    rustlibs: [
+        "libbytes",
+        "libnum_traits",
+        "libthiserror",
+        "liblog_rust",
+    ],
+}
