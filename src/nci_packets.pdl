@@ -68,7 +68,7 @@ enum Status : 8 {
 
 packet Command {
   _fixed_ =  0x1 : 3,
-  packet_boundary_flag : PacketBoundaryFlag,
+  pbf : PacketBoundaryFlag,
   op : GroupAndOpcode,
   _size_(_payload_) : 8,
   _payload_,
@@ -76,7 +76,7 @@ packet Command {
 
 packet Response {
   _fixed_ =  0x2 : 3,
-  packet_boundary_flag : PacketBoundaryFlag,
+  pbf : PacketBoundaryFlag,
   op : GroupAndOpcode,
   _size_(_payload_) : 8,
   _payload_,
@@ -84,7 +84,7 @@ packet Response {
 
 packet Notification {
   _fixed_ =  0x3 : 3,
-  packet_boundary_flag : PacketBoundaryFlag,
+  pbf : PacketBoundaryFlag,
   op : GroupAndOpcode,
   _size_(_payload_) : 8,
   _payload_,
@@ -92,7 +92,7 @@ packet Notification {
 
 packet Data {
   _fixed_ =  0x0 : 3,
-  packet_boundary_flag : PacketBoundaryFlag,
+  pbf : PacketBoundaryFlag,
   conn_id : 4,
   cr : 8,
   _size_(_payload_) : 8,
@@ -115,7 +115,7 @@ packet ResetResponse : Response (op = CORE_RESET) {
 enum ResetTrigger : 8 {
   UNRECOVERABLE_ERROR = 0,
   POWER_ON = 1,
-  REST_COMMAND = 2,
+  RESET_COMMAND = 2,
 }
 
 enum NciVersion : 8 {
