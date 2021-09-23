@@ -24,7 +24,7 @@ type Result<T> = std::result::Result<T, RootcanalError>;
 
 #[derive(Debug, Error)]
 enum RootcanalError {
-    #[error("Termination requiest")]
+    #[error("Termination request")]
     TerminateTask,
     #[error("Socket error")]
     IoError(#[from] io::Error),
@@ -157,6 +157,7 @@ where
     println!("command written");
     Ok(())
 }
+
 async fn write_ntf<W, T>(writer: &mut W, rsp: T) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
