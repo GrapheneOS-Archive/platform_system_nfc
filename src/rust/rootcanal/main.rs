@@ -3,16 +3,14 @@
 
 use bytes::{BufMut, BytesMut};
 use nfc_packets::nci;
-use nfc_packets::nci::CommandChild::{InitCommand, ResetCommand};
-use nfc_packets::nci::{
-    CommandPacket, NotificationPacket, Packet, PacketBoundaryFlag, ResponsePacket,
-};
+use nfc_packets::nci::NciChild::{InitCommand, ResetCommand};
 use nfc_packets::nci::{
     ConfigStatus, NciVersion, ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger,
     ResetType,
 };
 use nfc_packets::nci::{InitResponseBuilder, NfccFeatures, RfInterface};
-use num_derive::{FromPrimitive, ToPrimitive};
+use nfc_packets::nci::{NciMsgType, NciPacket, Packet, PacketBoundaryFlag};
+// use num_derive::{FromPrimitive, ToPrimitive};
 use std::convert::TryInto;
 use thiserror::Error;
 use tokio::io;
@@ -36,14 +34,7 @@ enum RootcanalError {
     UnsupportedPacket,
 }
 
-#[derive(FromPrimitive, ToPrimitive)]
-enum NciPacketType {
-    Data = 0x00,
-    Command = 0x01,
-    Response = 0x02,
-    Notification = 0x03,
-    Termination = 0x04,
-}
+const TERMINATION: u8 = 4u8;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -52,7 +43,8 @@ async fn main() -> io::Result<()> {
     let (mut sock, _) = listener.accept().await?;
 
     tokio::spawn(async move {
-        let (mut rd, mut wr) = sock.split();
+        let (rd, mut wr) = sock.split();
+        let mut rd = BufReader::new(rd);
         loop {
             if let Err(e) = process(&mut rd, &mut wr).await {
                 match e {
@@ -71,7 +63,6 @@ where
     R: AsyncReadExt + Unpin,
     W: AsyncWriteExt + Unpin,
 {
-    let mut reader = BufReader::new(reader);
     let mut buffer = BytesMut::with_capacity(1024);
     let pkt_type = reader.read_u8().await?;
     let len: usize = reader.read_u16().await?.into();
@@ -80,27 +71,27 @@ where
     reader.read_exact(&mut buffer).await?;
     let frozen = buffer.freeze();
     eprintln!("{:?}", &frozen);
-    if pkt_type == NciPacketType::Command as u8 {
-        match CommandPacket::parse(&frozen) {
+    if pkt_type == NciMsgType::Command as u8 {
+        match NciPacket::parse(&frozen) {
             Ok(p) => command_response(writer, p).await,
             Err(_) => Err(RootcanalError::InvalidPacket),
         }
-    } else if pkt_type == NciPacketType::Termination as u8 {
+    } else if pkt_type == TERMINATION {
         Err(RootcanalError::TerminateTask)
     } else {
         Err(RootcanalError::UnsupportedPacket)
     }
 }
 
-async fn command_response<W>(out: &mut W, cmd: CommandPacket) -> Result<()>
+async fn command_response<W>(out: &mut W, cmd: NciPacket) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
 {
     let pbf = PacketBoundaryFlag::CompleteOrFinal;
     match cmd.specialize() {
         ResetCommand(rst) => {
-            write_rsp(out, (ResetResponseBuilder { pbf, status: nci::Status::Ok }).build()).await?;
-            write_ntf(
+            write_nci(out, (ResetResponseBuilder { pbf, status: nci::Status::Ok }).build()).await?;
+            write_nci(
                 out,
                 (ResetNotificationBuilder {
                     pbf,
@@ -121,7 +112,7 @@ where
         InitCommand(_) => {
             let nfcc_feat = [0u8; 5];
             let rf_int = [0u8, 2];
-            write_rsp(
+            write_nci(
                 out,
                 (InitResponseBuilder {
                     pbf,
@@ -143,32 +134,20 @@ where
     }
 }
 
-async fn write_rsp<W, T>(writer: &mut W, rsp: T) -> Result<()>
+async fn write_nci<W, T>(writer: &mut W, rsp: T) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
-    T: Into<ResponsePacket>,
+    T: Into<NciPacket>,
 {
-    let b = rsp.into().to_bytes();
+    let pkt = rsp.into();
+    let pkt_type = pkt.get_mt() as u8;
+    let b = pkt.to_bytes();
     let mut data = BytesMut::with_capacity(b.len() + 3);
-    data.put_u8(NciPacketType::Response as u8);
+    data.put_u8(pkt_type);
     data.put_u16(b.len().try_into().unwrap());
     data.extend(b);
-    writer.write_all(&data[..]).await?;
-    println!("command written");
-    Ok(())
-}
-
-async fn write_ntf<W, T>(writer: &mut W, rsp: T) -> Result<()>
-where
-    W: AsyncWriteExt + Unpin,
-    T: Into<NotificationPacket>,
-{
-    let b = rsp.into().to_bytes();
-    let mut data = BytesMut::with_capacity(b.len() + 3);
-    data.put_u8(NciPacketType::Notification as u8);
-    data.put_u16(b.len().try_into().unwrap());
-    data.extend(b);
-    writer.write_all(&data[..]).await?;
+    let frozen = data.freeze();
+    writer.write_all(frozen.as_ref()).await?;
     println!("command written");
     Ok(())
 }
