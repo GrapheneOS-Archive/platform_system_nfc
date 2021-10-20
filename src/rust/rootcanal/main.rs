@@ -38,6 +38,10 @@ const TERMINATION: u8 = 4u8;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    logger::init(
+        logger::Config::default().with_tag_on_device("nfc-rc").with_min_level(log::Level::Trace),
+    );
+
     let listener = TcpListener::bind("127.0.0.1:54323").await?;
 
     let (mut sock, _) = listener.accept().await?;
@@ -66,11 +70,11 @@ where
     let mut buffer = BytesMut::with_capacity(1024);
     let pkt_type = reader.read_u8().await?;
     let len: usize = reader.read_u16().await?.into();
-    eprintln!("packet {} received len={}", &pkt_type, &len);
+    log::debug!("packet {} received len={}", &pkt_type, &len);
     buffer.resize(len, 0);
     reader.read_exact(&mut buffer).await?;
     let frozen = buffer.freeze();
-    eprintln!("{:?}", &frozen);
+    log::debug!("{:?}", &frozen);
     if pkt_type == NciMsgType::Command as u8 {
         match NciPacket::parse(&frozen) {
             Ok(p) => command_response(writer, p).await,
@@ -148,6 +152,6 @@ where
     data.extend(b);
     let frozen = data.freeze();
     writer.write_all(frozen.as_ref()).await?;
-    println!("command written");
+    log::debug!("command written");
     Ok(())
 }
