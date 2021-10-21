@@ -16,6 +16,7 @@ rust_binary {
         "libnfc_packets",
         "libbytes",
         "libthiserror",
+	"liblogger",
         "liblog_rust",
         "libtokio",
     ],
