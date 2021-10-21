@@ -5,6 +5,13 @@ enum PacketBoundaryFlag : 1 {
   INCOMPLETE = 1,
 }
 
+enum NciMsgType : 3 {
+  DATA = 0,
+  COMMAND = 1,
+  RESPONSE = 2,
+  NOTIFICATION = 3,
+}
+
 enum GroupAndOpcode : 12 {
   CORE_RESET = 0x0,
   CORE_INIT = 0x1,
@@ -66,24 +73,8 @@ enum Status : 8 {
   NFCEE_TIMEOUT_ERROR = 0xC3,
 }
 
-packet Command {
-  _fixed_ =  0x1 : 3,
-  pbf : PacketBoundaryFlag,
-  op : GroupAndOpcode,
-  _size_(_payload_) : 8,
-  _payload_,
-}
-
-packet Response {
-  _fixed_ =  0x2 : 3,
-  pbf : PacketBoundaryFlag,
-  op : GroupAndOpcode,
-  _size_(_payload_) : 8,
-  _payload_,
-}
-
-packet Notification {
-  _fixed_ =  0x3 : 3,
+packet Nci {
+  mt : NciMsgType,
   pbf : PacketBoundaryFlag,
   op : GroupAndOpcode,
   _size_(_payload_) : 8,
@@ -104,11 +95,11 @@ enum ResetType : 8 {
   RESET_CONFIG = 1,
 }
 
-packet ResetCommand : Command (op = CORE_RESET) {
+packet ResetCommand : Nci (mt = COMMAND, op = CORE_RESET) {
   reset_type: ResetType,
 }
 
-packet ResetResponse : Response (op = CORE_RESET) {
+packet ResetResponse : Nci (mt = RESPONSE, op = CORE_RESET) {
   status: Status,
 }
 
@@ -129,7 +120,7 @@ enum ConfigStatus : 8 {
   CONFIG_RESET = 0x01,
 }
 
-packet ResetNotification : Notification (op = CORE_RESET) {
+packet ResetNotification : Nci (mt = NOTIFICATION, op = CORE_RESET) {
   trigger : ResetTrigger,
   config_status : ConfigStatus,
   nci_version : NciVersion,
@@ -209,11 +200,11 @@ struct RfInterface {
   extns : ExtList[],
 }
 
-packet InitCommand : Command (op = CORE_INIT) {
+packet InitCommand : Nci (mt = COMMAND, op = CORE_INIT) {
   feature_eneble : FeatureEnable,
 }
 
-packet InitResponse : Response (op = CORE_INIT) {
+packet InitResponse : Nci (mt = RESPONSE, op = CORE_INIT) {
   status : Status,
   nfcc_features : NfccFeatures,
   _reserved_ : 4,
@@ -303,23 +294,23 @@ struct ParamList {
   pids : ParamIds,
 }
 
-packet SetConfigCommand : Command (op = CORE_SET_CONFIG) {
+packet SetConfigCommand : Nci (mt = COMMAND, op = CORE_SET_CONFIG) {
   _count_(params) : 8,
   params : ConfigParams[],
 }
 
-packet SetConfigResponse : Response (op = CORE_SET_CONFIG) {
+packet SetConfigResponse : Nci (mt = RESPONSE, op = CORE_SET_CONFIG) {
   status : Status,
   _count_(paramids) : 8,
   paramids : ParamList[],
 }
 
-packet GetConfigCommand : Command (op = CORE_GET_CONFIG) {
+packet GetConfigCommand : Nci (mt = COMMAND, op = CORE_GET_CONFIG) {
   _count_(paramids) : 8,
   paramids : ParamList[],
 }
 
-packet GetConfigResponse : Response (op = CORE_GET_CONFIG) {
+packet GetConfigResponse : Nci (mt = RESPONSE, op = CORE_GET_CONFIG) {
   status : Status,
   _count_(params) : 8,
   params : ConfigParams[],
