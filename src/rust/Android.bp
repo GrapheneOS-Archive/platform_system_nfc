@@ -16,3 +16,75 @@ rust_defaults {
     },
     host_supported: true,
 }
+
+cc_defaults {
+    name: "nfc_ffi_defaults",
+    target: {
+        darwin: {
+            enabled: false,
+        },
+    },
+}
+
+rust_library {
+    name: "libnfc_hal",
+    defaults: ["nfc_rust_defaults"],
+    crate_name: "nfc_hal",
+    srcs: ["hal/hal.rs"],
+    edition: "2018",
+    host_supported: true,
+    rustlibs: [
+        "libnfc_packets",
+        "libbytes",
+        "libthiserror",
+        "libtokio",
+        "libcxx",
+        "liblazy_static",
+        "liblog_rust",
+    ],
+    proc_macros: ["libnum_derive"],
+    target: {
+        android: {
+                whole_static_libs: ["libnfc_hidl_hal_cxx"],
+                shared_libs: [
+                    "android.hardware.nfc@1.0",
+                    "android.hardware.nfc@1.1",
+                    "android.hardware.nfc@1.2",
+                    "libhidlbase",
+                    "libutils",
+                ],
+        },
+    },
+}
+
+genrule {
+    name: "libnfc_hidl_hal_bridge_header",
+    tools: ["cxxbridge"],
+    cmd: "$(location cxxbridge) $(in) --header > $(out)",
+    srcs: ["hal/hidl_hal.rs"],
+    out: ["hal/hidl_hal.rs.h"],
+}
+
+genrule {
+    name: "libnfc_hidl_hal_bridge_code",
+    tools: ["cxxbridge"],
+    cmd: "$(location cxxbridge) $(in) >> $(out)",
+    srcs: ["hal/hidl_hal.rs"],
+    out: ["hidl_hal_generated.cc"],
+}
+
+cc_library_static {
+    name: "libnfc_hidl_hal_cxx",
+    defaults: ["nfc_ffi_defaults"],
+    srcs: ["hal/ffi/hidl.cc"],
+    local_include_dirs: ["hal/ffi"],
+    generated_headers: ["libnfc_hidl_hal_bridge_header", "cxx-bridge-header"],
+    generated_sources: ["libnfc_hidl_hal_bridge_code"],
+    shared_libs: [
+        "android.hardware.nfc@1.0",
+        "android.hardware.nfc@1.1",
+        "android.hardware.nfc@1.2",
+        "libhidlbase",
+        "libutils",
+    ],
+}
