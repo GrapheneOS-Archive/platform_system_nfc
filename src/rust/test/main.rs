@@ -38,6 +38,8 @@ async fn command_response(
 
 async fn send_reset(out: UnboundedSender<NciPacket>) -> Result<()> {
     let pbf = PacketBoundaryFlag::CompleteOrFinal;
-    out.send((ResetCommandBuilder { pbf, reset_type: ResetType::ResetConfig }).build().into())?;
+    out.send(
+        (ResetCommandBuilder { gid: 0, pbf, reset_type: ResetType::ResetConfig }).build().into(),
+    )?;
     Ok(())
 }
