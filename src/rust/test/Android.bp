@@ -14,6 +14,7 @@ rust_binary {
     edition: "2018",
     rustlibs: [
         "libnfc_packets",
+        "libnfc_hal",
         "libbytes",
         "libthiserror",
 	"liblogger",
