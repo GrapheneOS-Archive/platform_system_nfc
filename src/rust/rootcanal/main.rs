@@ -12,7 +12,6 @@ use nfc_packets::nci::{
 };
 use nfc_packets::nci::{InitResponseBuilder, NfccFeatures, RfInterface};
 use nfc_packets::nci::{NciMsgType, NciPacket, Packet, PacketBoundaryFlag};
-// use num_derive::{FromPrimitive, ToPrimitive};
 use std::convert::TryInto;
 use thiserror::Error;
 use tokio::io;
@@ -92,12 +91,15 @@ where
     W: AsyncWriteExt + Unpin,
 {
     let pbf = PacketBoundaryFlag::CompleteOrFinal;
+    let gid = 0u8;
     match cmd.specialize() {
         ResetCommand(rst) => {
-            write_nci(out, (ResetResponseBuilder { pbf, status: nci::Status::Ok }).build()).await?;
+            write_nci(out, (ResetResponseBuilder { gid, pbf, status: nci::Status::Ok }).build())
+                .await?;
             write_nci(
                 out,
                 (ResetNotificationBuilder {
+                    gid,
                     pbf,
                     trigger: ResetTrigger::ResetCommand,
                     config_status: if rst.get_reset_type() == ResetType::KeepConfig {
@@ -119,6 +121,7 @@ where
             write_nci(
                 out,
                 (InitResponseBuilder {
+                    gid,
                     pbf,
                     status: nci::Status::Ok,
                     nfcc_features: NfccFeatures::parse(&nfcc_feat).unwrap(),
