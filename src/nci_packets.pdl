@@ -12,7 +12,7 @@ enum NciMsgType : 3 {
   NOTIFICATION = 3,
 }
 
-enum GroupAndOpcode : 12 {
+enum Opcode : 8 {
   CORE_RESET = 0x0,
   CORE_INIT = 0x1,
   CORE_SET_CONFIG = 0x2,
@@ -74,17 +74,18 @@ enum Status : 8 {
 }
 
 packet Nci {
-  mt : NciMsgType,
+  gid : 4,
   pbf : PacketBoundaryFlag,
-  op : GroupAndOpcode,
+  mt : NciMsgType,
+  op : Opcode,
   _size_(_payload_) : 8,
   _payload_,
 }
 
 packet Data {
-  _fixed_ =  0x0 : 3,
-  pbf : PacketBoundaryFlag,
   conn_id : 4,
+  pbf : PacketBoundaryFlag,
+  _fixed_ =  0x0 : 3,
   cr : 8,
   _size_(_payload_) : 8,
   _payload_,
@@ -315,3 +316,90 @@ packet GetConfigResponse : Nci (mt = RESPONSE, op = CORE_GET_CONFIG) {
   _count_(params) : 8,
   params : ConfigParams[],
 }
+
+enum RfProtocols : 8 {
+  PROTOCOL_UNDETERMINED = 0x00,
+  PROTOCOL_T1T = 0x01,
+  PROTOCOL_T2T = 0x02,
+  PROTOCOL_T3T = 0x03,
+  PROTOCOL_ISO_DEP = 0x04,
+  PROTOCOL_NFC_DEP = 0x05,
+  PROTOCOL_T5T = 0x06,
+  PROTOCOL_NDEF = 0x07,
+}
+
+enum NfceeProtocols : 8 {
+  APDU = 0x00,
+  RFU = 0x01,
+  T3CS = 0x02,
+  TRANSPARENT = 0x04,
+}
+
+enum DestTypes : 8 {
+  RFU = 0x00,
+  NFCC_LPBK = 0x01,
+  REMOTE = 0x02,
+  NFCEE = 0x03,
+}
+
+enum DestParamTypes : 8 {
+  RF_DISC = 0x00,
+  NFCEE = 0x01,
+}
+
+struct RfDiscType {
+  id : 8,
+  proto: RfProtocols,
+}
+
+struct NfceeType {
+  id : 8,
+  proto : NfceeProtocols,
+}
+
+struct DestParams {
+  ptype : DestParamTypes,
+  _size_(valdsp) : 8,
+  valdsp : 8[],
+}
+
+packet ConnCreateCommand : Nci (mt = COMMAND, op = CORE_CONN_CREATE) {
+  dt : DestTypes,
+  _count_(destparams) : 8,
+  destparams : DestParams[],
+}
+
+packet ConnCreateResponse : Nci (mt = RESPONSE, op = CORE_CONN_CREATE) {
+  status : Status,
+  mpps : 8,
+  ncreds : 8,
+  conn_id : 8,
+}
+
+packet ConnCloseCommand : Nci (mt = COMMAND, op = CORE_CONN_CLOSE) {
+  conn_id : 8,
+}
+
+packet ConnCloseResponse : Nci (mt = RESPONSE, op = CORE_CONN_CLOSE) {
+  status : Status,
+}
+
+struct CreditsPerConn {
+  conn_id : 8,
+  ncredits : 8,
+}
+
+packet ConnCreditsNotification : Nci (mt = NOTIFICATION, op = CORE_CONN_CREDITS) {
+  _count_(conns) : 8,
+  conns : CreditsPerConn[],
+}
+
+packet GenericError : Nci (mt = NOTIFICATION, op = CORE_GENERIC_ERROR) {
+  status : Status,
+}
+
+packet InterfaceError : Nci (mt = NOTIFICATION, op = CORE_INTERFACE_ERROR) {
+  status : Status,
+  conn_id : 8,
+}
+
