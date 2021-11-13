@@ -1,8 +1,5 @@
 #include "hal/ffi/hidl.h"
 
-#include <android/hardware/nfc/1.0/INfc.h>
-#include <android/hardware/nfc/1.1/INfc.h>
-#include <android/hardware/nfc/1.2/INfc.h>
 #include <log/log.h>
 #include <stdlib.h>
 
@@ -43,13 +40,13 @@ class NfcCallbackTrampoline : public INfcClientCallback {
   Return<void> sendEvent_1_1(
       ::android::hardware::nfc::V1_1::NfcEvent event,
       ::android::hardware::nfc::V1_0::NfcStatus event_status) override {
-    on_event((::std::uint32_t)event, (::std::uint32_t)event_status);
+    on_event(event, event_status);
     return Void();
   }
   Return<void> sendEvent(
       ::android::hardware::nfc::V1_0::NfcEvent event,
       ::android::hardware::nfc::V1_0::NfcStatus event_status) override {
-    on_event((::std::uint32_t)event, (::std::uint32_t)event_status);
+    on_event((::android::hardware::nfc::V1_1::NfcEvent)event, event_status);
     return Void();
   }
 
