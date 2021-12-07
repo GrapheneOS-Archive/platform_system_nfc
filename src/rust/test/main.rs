@@ -2,13 +2,12 @@
 //! This connects to "rootcanal" which provides a simulated
 //! Nfc chip as well as a simulated environment.
 
-use log::{debug, Level};
+use log::{debug, error, Level};
 use logger::{self, Config};
-use nfc_packets::nci::NciPacket;
-use nfc_packets::nci::ResetCommandBuilder;
-use nfc_packets::nci::{PacketBoundaryFlag, ResetType};
-use tokio::select;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use nfc_packets::nci::CommandPacket;
+use nfc_packets::nci::Opcode::{self, CoreInit, CoreReset};
+use nfc_packets::nci::{FeatureEnable, PacketBoundaryFlag, ResetType};
+use nfc_packets::nci::{InitCommandBuilder, ResetCommandBuilder};
 
 /// Result type
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -16,30 +15,30 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 #[tokio::main]
 async fn main() -> Result<()> {
     logger::init(Config::default().with_tag_on_device("lnfc").with_min_level(Level::Trace));
-    let (out_tx, in_rx) = nfc_hal::init().await;
-    let out_tx_cmd = out_tx.clone();
-    let task = tokio::spawn(command_response(out_tx, in_rx));
-    send_reset(out_tx_cmd).await?;
-    task.await.unwrap();
+    let mut nci = nfc_rnci::init().await;
+    let reset = nci.commands.send_and_notify(build_cmd(CoreReset).unwrap()).await?;
+    let init = nci.commands.send(build_cmd(CoreInit).unwrap()).await?;
+    let reset_response_packet = reset.response.specialize();
+    debug!("Received {:?}", reset_response_packet);
+    let init_response_packet = init.specialize();
+    debug!("Received {:?}", init_response_packet);
+    let notification_packet = reset.notification.await?;
+    debug!("Received {:?}", notification_packet.specialize());
     Ok(())
 }
 
-async fn command_response(
-    _out_tx: UnboundedSender<NciPacket>,
-    mut in_rx: UnboundedReceiver<NciPacket>,
-) {
-    loop {
-        select! {
-            Some(cmd) = in_rx.recv() => debug!("{} - response received", cmd.get_op()),
-            else => break,
+fn build_cmd(cmd_op_code: Opcode) -> Option<CommandPacket> {
+    let pbf = PacketBoundaryFlag::CompleteOrFinal;
+    match cmd_op_code {
+        CoreReset => Some(
+            ResetCommandBuilder { gid: 0, pbf, reset_type: ResetType::ResetConfig }.build().into(),
+        ),
+        CoreInit => Some(
+            InitCommandBuilder { gid: 0, pbf, feature_eneble: FeatureEnable::Rfu }.build().into(),
+        ),
+        _ => {
+            error!("Unsupported command: {}", cmd_op_code);
+            None
         }
     }
-}
-
-async fn send_reset(out: UnboundedSender<NciPacket>) -> Result<()> {
-    let pbf = PacketBoundaryFlag::CompleteOrFinal;
-    out.send(
-        (ResetCommandBuilder { gid: 0, pbf, reset_type: ResetType::ResetConfig }).build().into(),
-    )?;
-    Ok(())
 }
