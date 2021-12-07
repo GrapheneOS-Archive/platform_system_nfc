@@ -27,6 +27,24 @@ cc_defaults {
 }
 
 rust_library {
+    name: "libnfc_rnci",
+    defaults: ["nfc_rust_defaults"],
+    crate_name: "nfc_rnci",
+    srcs: ["nci/nci.rs"],
+    edition: "2018",
+    host_supported: true,
+    rustlibs: [
+        "libnfc_packets",
+        "libnfc_hal",
+        "libtokio",
+        "libcxx",
+        "liblazy_static",
+        "liblog_rust",
+    ],
+    proc_macros: ["libnum_derive"],
+}
+
+rust_library {
     name: "libnfc_hal",
     defaults: ["nfc_rust_defaults"],
     crate_name: "nfc_hal",
