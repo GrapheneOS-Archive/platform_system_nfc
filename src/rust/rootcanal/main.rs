@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use log::{debug, Level};
 use logger::{self, Config};
 use nfc_packets::nci;
-use nfc_packets::nci::NciChild::{InitCommand, ResetCommand};
+use nfc_packets::nci::{CommandChild, NciChild};
 use nfc_packets::nci::{
     ConfigStatus, NciVersion, ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger,
     ResetType,
@@ -67,13 +67,13 @@ where
     W: AsyncWriteExt + Unpin,
 {
     let mut buffer = BytesMut::with_capacity(1024);
-    let pkt_type = reader.read_u8().await?;
     let len: usize = reader.read_u16().await?.into();
-    debug!("packet {} received len={}", &pkt_type, &len);
     buffer.resize(len, 0);
     reader.read_exact(&mut buffer).await?;
     let frozen = buffer.freeze();
     debug!("{:?}", &frozen);
+    let pkt_type = (frozen[0] >> 5) & 0x7;
+    debug!("packet {} received len={}", &pkt_type, &len);
     if pkt_type == NciMsgType::Command as u8 {
         match NciPacket::parse(&frozen) {
             Ok(p) => command_response(writer, p).await,
@@ -93,51 +93,57 @@ where
     let pbf = PacketBoundaryFlag::CompleteOrFinal;
     let gid = 0u8;
     match cmd.specialize() {
-        ResetCommand(rst) => {
-            write_nci(out, (ResetResponseBuilder { gid, pbf, status: nci::Status::Ok }).build())
+        NciChild::Command(cmd) => match cmd.specialize() {
+            CommandChild::ResetCommand(rst) => {
+                write_nci(
+                    out,
+                    (ResetResponseBuilder { gid, pbf, status: nci::Status::Ok }).build(),
+                )
                 .await?;
-            write_nci(
-                out,
-                (ResetNotificationBuilder {
-                    gid,
-                    pbf,
-                    trigger: ResetTrigger::ResetCommand,
-                    config_status: if rst.get_reset_type() == ResetType::KeepConfig {
-                        ConfigStatus::ConfigKept
-                    } else {
-                        ConfigStatus::ConfigReset
-                    },
-                    nci_version: NciVersion::Version20,
-                    manufacturer_id: 0,
-                    payload: None,
-                })
-                .build(),
-            )
-            .await
-        }
-        InitCommand(_) => {
-            let nfcc_feat = [0u8; 5];
-            let rf_int = [0u8, 2];
-            write_nci(
-                out,
-                (InitResponseBuilder {
-                    gid,
-                    pbf,
-                    status: nci::Status::Ok,
-                    nfcc_features: NfccFeatures::parse(&nfcc_feat).unwrap(),
-                    max_log_conns: 0,
-                    max_rout_tbls_size: 0x0000,
-                    max_ctrl_payload: 255,
-                    max_data_payload: 255,
-                    num_of_credits: 0,
-                    max_nfcv_rf_frame_sz: 64,
-                    rf_interface: vec![RfInterface::parse(&rf_int).unwrap()],
-                })
-                .build(),
-            )
-            .await
-        }
-        _ => Err(RootcanalError::UnsupportedCommand),
+                write_nci(
+                    out,
+                    (ResetNotificationBuilder {
+                        gid,
+                        pbf,
+                        trigger: ResetTrigger::ResetCommand,
+                        config_status: if rst.get_reset_type() == ResetType::KeepConfig {
+                            ConfigStatus::ConfigKept
+                        } else {
+                            ConfigStatus::ConfigReset
+                        },
+                        nci_version: NciVersion::Version20,
+                        manufacturer_id: 0,
+                        mfsi: Vec::new(),
+                    })
+                    .build(),
+                )
+                .await
+            }
+            CommandChild::InitCommand(_) => {
+                let nfcc_feat = [0u8; 5];
+                let rf_int = [0u8; 2];
+                write_nci(
+                    out,
+                    (InitResponseBuilder {
+                        gid,
+                        pbf,
+                        status: nci::Status::Ok,
+                        nfcc_features: NfccFeatures::parse(&nfcc_feat).unwrap(),
+                        max_log_conns: 0,
+                        max_rout_tbls_size: 0x0000,
+                        max_ctrl_payload: 255,
+                        max_data_payload: 255,
+                        num_of_credits: 0,
+                        max_nfcv_rf_frame_sz: 64,
+                        rf_interface: vec![RfInterface::parse(&rf_int).unwrap(); 1],
+                    })
+                    .build(),
+                )
+                .await
+            }
+            _ => Err(RootcanalError::UnsupportedCommand),
+        },
+        _ => Err(RootcanalError::InvalidPacket),
     }
 }
 
@@ -147,10 +153,8 @@ where
     T: Into<NciPacket>,
 {
     let pkt = rsp.into();
-    let pkt_type = pkt.get_mt() as u8;
     let b = pkt.to_bytes();
-    let mut data = BytesMut::with_capacity(b.len() + 3);
-    data.put_u8(pkt_type);
+    let mut data = BytesMut::with_capacity(b.len() + 2);
     data.put_u16(b.len().try_into().unwrap());
     data.extend(b);
     let frozen = data.freeze();

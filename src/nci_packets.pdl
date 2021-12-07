@@ -77,7 +77,23 @@ packet Nci {
   gid : 4,
   pbf : PacketBoundaryFlag,
   mt : NciMsgType,
+  _payload_,
+}
+
+packet Command : Nci (mt = COMMAND) {
   op : Opcode,
+  _size_(_payload_) : 8,
+  _payload_,
+}
+
+packet Response : Nci (mt = RESPONSE) {
+  cmd_op : Opcode,
+  _size_(_payload_) : 8,
+  _payload_,
+}
+
+packet Notification : Nci (mt = NOTIFICATION) {
+  cmd_op : Opcode,
   _size_(_payload_) : 8,
   _payload_,
 }
@@ -96,12 +112,20 @@ enum ResetType : 8 {
   RESET_CONFIG = 1,
 }
 
-packet ResetCommand : Nci (mt = COMMAND, op = CORE_RESET) {
+packet ResetCommand : Command (op = CORE_RESET) {
   reset_type: ResetType,
 }
 
-packet ResetResponse : Nci (mt = RESPONSE, op = CORE_RESET) {
+test ResetCommand {
+  "\x20\x00\x01\x01",
+}
+
+packet ResetResponse : Response (cmd_op = CORE_RESET) {
   status: Status,
+}
+
+test ResetResponse {
+  "\x40\x00\x01\x00",
 }
 
 enum ResetTrigger : 8 {
@@ -121,13 +145,17 @@ enum ConfigStatus : 8 {
   CONFIG_RESET = 0x01,
 }
 
-packet ResetNotification : Nci (mt = NOTIFICATION, op = CORE_RESET) {
+packet ResetNotification : Notification (cmd_op = CORE_RESET) {
   trigger : ResetTrigger,
   config_status : ConfigStatus,
   nci_version : NciVersion,
   manufacturer_id: 8,
-  _size_(_payload_) : 8,
-  _payload_,
+  _size_(mfsi) : 8,
+  mfsi : 8[],
+}
+
+test ResetNotification {
+  "\x60\x00\x1f\x02\x01\x20\x02\x1a\x05\x03\x03\x06\x88\x97\x01\x06\x00\x00\x44\x64\xd6\x00\x00\xec\x10\x00\x00\x00\x01\x00\x00\xee\xe7\x02",
 }
 
 enum FeatureEnable : 16 {
@@ -157,24 +185,24 @@ struct PropCaps {
 }
 
 struct NfccFeatures {
-  _reserved_ : 3,
-  active_comm_mode : FeatureState,
-  hci_net_support : FeatureState,
-  disc_conf_mode : DiscConfMode,
   disc_freq_conf : FeatureState,
+  disc_conf_mode : DiscConfMode,
+  hci_net_support : FeatureState,
+  active_comm_mode : FeatureState,
+  _reserved_ : 3,
   _reserved_: 1,
-  forced_nfcee_routing : FeatureState,
-  apdu_pttn_routing : FeatureState,
-  syc_code_routing : FeatureState,
-  aid_routing : FeatureState,
-  proto_routing : FeatureState,
   tech_routing : FeatureState,
+  proto_routing : FeatureState,
+  aid_routing : FeatureState,
+  syc_code_routing : FeatureState,
+  apdu_pttn_routing : FeatureState,
+  forced_nfcee_routing : FeatureState,
   _reserved_ : 1,
-  _reserved_ : 4,
-  rf_conf_soff: FeatureState,
-  swon_subst : FeatureState,
-  soff_st : FeatureState,
   batt_off_st : FeatureState,
+  soff_st : FeatureState,
+  swon_subst : FeatureState,
+  rf_conf_soff: FeatureState,
+  _reserved_ : 4,
   prop_caps: PropCaps,
 }
 
@@ -196,20 +224,24 @@ struct ExtList {
 }
 
 struct RfInterface {
-  intf : Intf,
-  _count_(extns) : 8,
-  extns : ExtList[],
+  intf : 8,
+  _size_(extns) : 8,
+  extns : 8[],
 }
 
-packet InitCommand : Nci (mt = COMMAND, op = CORE_INIT) {
+packet InitCommand : Command (op = CORE_INIT) {
   feature_eneble : FeatureEnable,
 }
 
-packet InitResponse : Nci (mt = RESPONSE, op = CORE_INIT) {
+test InitCommand {
+  "\x20\x01\x02\x00\x00",
+}
+
+packet InitResponse : Response (cmd_op = CORE_INIT) {
   status : Status,
   nfcc_features : NfccFeatures,
-  _reserved_ : 4,
   max_log_conns : 4, //TODO set max to 0x0E
+  _reserved_ : 4,
   max_rout_tbls_size : 16,
   max_ctrl_payload : 8,  //TODO 32 <= val <= 255
   max_data_payload : 8,
@@ -217,6 +249,10 @@ packet InitResponse : Nci (mt = RESPONSE, op = CORE_INIT) {
   max_nfcv_rf_frame_sz : 16,
   _count_(rf_interface) : 8,
   rf_interface: RfInterface[],
+}
+
+test InitResponse {
+  "\x40\x01\x18\x00\x1a\x7e\x06\x00\x01\x00\x04\xff\xff\x00\x0c\x01\x05\x01\x00\x02\x00\x03\x00\x00\x00\x90\x00",
 }
 
 enum ParamIds : 8 {
@@ -295,23 +331,23 @@ struct ParamList {
   pids : ParamIds,
 }
 
-packet SetConfigCommand : Nci (mt = COMMAND, op = CORE_SET_CONFIG) {
+packet SetConfigCommand : Command (op = CORE_SET_CONFIG) {
   _count_(params) : 8,
   params : ConfigParams[],
 }
 
-packet SetConfigResponse : Nci (mt = RESPONSE, op = CORE_SET_CONFIG) {
+packet SetConfigResponse : Response (cmd_op = CORE_SET_CONFIG) {
   status : Status,
   _count_(paramids) : 8,
   paramids : ParamList[],
 }
 
-packet GetConfigCommand : Nci (mt = COMMAND, op = CORE_GET_CONFIG) {
+packet GetConfigCommand : Command (op = CORE_GET_CONFIG) {
   _count_(paramids) : 8,
   paramids : ParamList[],
 }
 
-packet GetConfigResponse : Nci (mt = RESPONSE, op = CORE_GET_CONFIG) {
+packet GetConfigResponse : Response (cmd_op = CORE_GET_CONFIG) {
   status : Status,
   _count_(params) : 8,
   params : ConfigParams[],
@@ -363,24 +399,24 @@ struct DestParams {
   valdsp : 8[],
 }
 
-packet ConnCreateCommand : Nci (mt = COMMAND, op = CORE_CONN_CREATE) {
+packet ConnCreateCommand : Command (op = CORE_CONN_CREATE) {
   dt : DestTypes,
   _count_(destparams) : 8,
   destparams : DestParams[],
 }
 
-packet ConnCreateResponse : Nci (mt = RESPONSE, op = CORE_CONN_CREATE) {
+packet ConnCreateResponse : Response (cmd_op = CORE_CONN_CREATE) {
   status : Status,
   mpps : 8,
   ncreds : 8,
   conn_id : 8,
 }
 
-packet ConnCloseCommand : Nci (mt = COMMAND, op = CORE_CONN_CLOSE) {
+packet ConnCloseCommand : Command (op = CORE_CONN_CLOSE) {
   conn_id : 8,
 }
 
-packet ConnCloseResponse : Nci (mt = RESPONSE, op = CORE_CONN_CLOSE) {
+packet ConnCloseResponse : Response (cmd_op = CORE_CONN_CLOSE) {
   status : Status,
 }
 
@@ -389,16 +425,16 @@ struct CreditsPerConn {
   ncredits : 8,
 }
 
-packet ConnCreditsNotification : Nci (mt = NOTIFICATION, op = CORE_CONN_CREDITS) {
+packet ConnCreditsNotification : Notification (cmd_op = CORE_CONN_CREDITS) {
   _count_(conns) : 8,
   conns : CreditsPerConn[],
 }
 
-packet GenericError : Nci (mt = NOTIFICATION, op = CORE_GENERIC_ERROR) {
+packet GenericError : Notification (cmd_op = CORE_GENERIC_ERROR) {
   status : Status,
 }
 
-packet InterfaceError : Nci (mt = NOTIFICATION, op = CORE_INTERFACE_ERROR) {
+packet InterfaceError : Notification (cmd_op = CORE_INTERFACE_ERROR) {
   status : Status,
   conn_id : 8,
 }
