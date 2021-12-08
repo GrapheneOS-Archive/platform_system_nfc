@@ -1,23 +1,27 @@
 //! Implementation of the HAl that talks to NFC controller over Android's HIDL
-use crate::internal::{InnerHal, RawHal};
+use crate::internal::InnerHal;
 #[allow(unused)]
-use crate::Result;
+use crate::{is_control_packet, Hal, Result};
 use lazy_static::lazy_static;
 use log::error;
-use nfc_packets::nci::{NciPacket, Packet};
+use nfc_packets::nci::{DataPacket, NciPacket, Packet};
 use std::sync::Mutex;
 use tokio::select;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 /// Initialize the module
-pub async fn init() -> RawHal {
+pub async fn init() -> Hal {
     let (raw_hal, inner_hal) = InnerHal::new();
     let (hal_open_evt_tx, mut hal_open_evt_rx) = unbounded_channel();
-    *CALLBACKS.lock().unwrap() = Some(Callbacks { hal_open_evt_tx, in_tx: inner_hal.in_tx });
+    *CALLBACKS.lock().unwrap() = Some(Callbacks {
+        hal_open_evt_tx,
+        in_cmd_tx: inner_hal.in_cmd_tx,
+        in_data_tx: inner_hal.in_data_tx,
+    });
     ffi::start_hal();
     hal_open_evt_rx.recv().await.unwrap();
 
-    tokio::spawn(dispatch_outgoing(inner_hal.out_rx));
+    tokio::spawn(dispatch_outgoing(inner_hal.out_cmd_rx, inner_hal.out_data_rx));
 
     raw_hal
 }
@@ -71,7 +75,8 @@ mod ffi {
 
 struct Callbacks {
     hal_open_evt_tx: UnboundedSender<()>,
-    in_tx: UnboundedSender<NciPacket>,
+    in_cmd_tx: UnboundedSender<NciPacket>,
+    in_data_tx: UnboundedSender<DataPacket>,
 }
 
 lazy_static! {
@@ -87,18 +92,29 @@ fn on_event(evt: ffi::NfcEvent, status: ffi::NfcStatus) {
 }
 
 fn on_data(data: &[u8]) {
-    error!("got event: {:02x?}", data);
+    error!("got packet: {:02x?}", data);
     let callbacks = CALLBACKS.lock().unwrap();
-    match NciPacket::parse(data) {
-        Ok(p) => callbacks.as_ref().unwrap().in_tx.send(p).unwrap(),
-        Err(e) => error!("failure to parse response: {:?} data: {:02x?}", e, data),
+    if is_control_packet(data) {
+        match NciPacket::parse(data) {
+            Ok(p) => callbacks.as_ref().unwrap().in_cmd_tx.send(p).unwrap(),
+            Err(e) => error!("failure to parse response: {:?} data: {:02x?}", e, data),
+        }
+    } else {
+        match DataPacket::parse(data) {
+            Ok(p) => callbacks.as_ref().unwrap().in_data_tx.send(p).unwrap(),
+            Err(e) => error!("failure to parse response: {:?} data: {:02x?}", e, data),
+        }
     }
 }
 
-async fn dispatch_outgoing(mut out_rx: UnboundedReceiver<NciPacket>) {
+async fn dispatch_outgoing(
+    mut out_cmd_rx: UnboundedReceiver<NciPacket>,
+    mut out_data_rx: UnboundedReceiver<DataPacket>,
+) {
     loop {
         select! {
-            Some(cmd) = out_rx.recv() => ffi::send_command(&cmd.to_bytes()),
+            Some(cmd) = out_cmd_rx.recv() => ffi::send_command(&cmd.to_bytes()),
+            Some(data) = out_data_rx.recv() => ffi::send_command(&data.to_bytes()),
             else => break,
         }
     }
