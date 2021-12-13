@@ -11,7 +11,6 @@ rust_binary {
     name: "nfc_rootcanal",
     defaults: ["nfc_rust_defaults"],
     srcs: ["main.rs"],
-    edition: "2018",
     rustlibs: [
         "libnfc_packets",
         "libbytes",
