@@ -31,7 +31,6 @@ rust_library {
     defaults: ["nfc_rust_defaults"],
     crate_name: "nfc_rnci",
     srcs: ["nci/nci.rs"],
-    edition: "2018",
     host_supported: true,
     rustlibs: [
         "libnfc_packets",
@@ -49,7 +48,6 @@ rust_library {
     defaults: ["nfc_rust_defaults"],
     crate_name: "nfc_hal",
     srcs: ["hal/hal.rs"],
-    edition: "2018",
     host_supported: true,
     rustlibs: [
         "libnfc_packets",
