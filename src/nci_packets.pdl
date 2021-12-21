@@ -230,7 +230,7 @@ struct RfInterface {
 }
 
 packet InitCommand : Command (op = CORE_INIT) {
-  feature_eneble : FeatureEnable,
+  feature_enable : FeatureEnable,
 }
 
 test InitCommand {

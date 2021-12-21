@@ -1,9 +1,23 @@
+// Copyright 2021, The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Rootcanal HAL
 //! This connects to "rootcanal" which provides a simulated
 //! Nfc chip as well as a simulated environment.
 
 use crate::internal::InnerHal;
-use crate::{is_control_packet, Hal, Result};
+use crate::{is_control_packet, Hal, HalEvent, HalEventRegistry, HalEventStatus, Result};
 use bytes::{BufMut, BytesMut};
 use log::{debug, error};
 use nfc_packets::nci::{DataPacket, NciPacket, Packet};
@@ -23,7 +37,12 @@ pub async fn init() -> Hal {
 
     let reader = BufReader::new(reader);
     tokio::spawn(dispatch_incoming(inner_hal.in_cmd_tx, inner_hal.in_data_tx, reader));
-    tokio::spawn(dispatch_outgoing(inner_hal.out_cmd_rx, inner_hal.out_data_rx, writer));
+    tokio::spawn(dispatch_outgoing(
+        raw_hal.hal_events.clone(),
+        inner_hal.out_cmd_rx,
+        inner_hal.out_data_rx,
+        writer,
+    ));
 
     raw_hal
 }
@@ -46,20 +65,31 @@ where
         debug!("{:?}", &frozen);
         if is_control_packet(&frozen[..]) {
             match NciPacket::parse(&frozen) {
-                Ok(p) => in_cmd_tx.send(p)?,
+                Ok(p) => {
+                    if in_cmd_tx.send(p).is_err() {
+                        break;
+                    }
+                }
                 Err(e) => error!("dropping invalid cmd event packet: {}: {:02x}", e, frozen),
             }
         } else {
             match DataPacket::parse(&frozen) {
-                Ok(p) => in_data_tx.send(p)?,
+                Ok(p) => {
+                    if in_data_tx.send(p).is_err() {
+                        break;
+                    }
+                }
                 Err(e) => error!("dropping invalid data event packet: {}: {:02x}", e, frozen),
             }
         }
     }
+    debug!("Dispatch incoming finished.");
+    Ok(())
 }
 
 /// Send commands received from the NCI later to rootcanal
 async fn dispatch_outgoing<W>(
+    mut hal_events: HalEventRegistry,
     mut out_cmd_rx: UnboundedReceiver<NciPacket>,
     mut out_data_rx: UnboundedReceiver<DataPacket>,
     mut writer: W,
@@ -75,6 +105,11 @@ where
         }
     }
 
+    writer.shutdown().await?;
+    if let Some(evt) = hal_events.unregister(HalEvent::CloseComplete).await {
+        evt.send(HalEventStatus::Success).unwrap();
+    }
+    debug!("Dispatch outgoing finished.");
     Ok(())
 }
 

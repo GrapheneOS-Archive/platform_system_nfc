@@ -1,44 +1,43 @@
+// Copyright 2021, The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Rootcanal HAL
 //! This connects to "rootcanal" which provides a simulated
 //! Nfc chip as well as a simulated environment.
 
-use log::{debug, error, Level};
+use log::{debug, Level};
 use logger::{self, Config};
-use nfc_packets::nci::CommandPacket;
-use nfc_packets::nci::Opcode::{self, CoreInit, CoreReset};
-use nfc_packets::nci::{FeatureEnable, PacketBoundaryFlag, ResetType};
-use nfc_packets::nci::{InitCommandBuilder, ResetCommandBuilder};
+use nfc_rnci::api::NciApi;
 
 /// Result type
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+/// The NFC response callback
+pub fn nfc_callback(kind: u16, _val: &[u8]) {
+    debug!("Callback {} received", kind);
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     logger::init(Config::default().with_tag_on_device("lnfc").with_min_level(Level::Trace));
-    let mut nci = nfc_rnci::init().await;
-    let reset = nci.commands.send_and_notify(build_cmd(CoreReset).unwrap()).await?;
-    let init = nci.commands.send(build_cmd(CoreInit).unwrap()).await?;
-    let reset_response_packet = reset.response.specialize();
-    debug!("Received {:?}", reset_response_packet);
-    let init_response_packet = init.specialize();
-    debug!("Received {:?}", init_response_packet);
-    let notification_packet = reset.notification.await?;
-    debug!("Received {:?}", notification_packet.specialize());
-    Ok(())
-}
 
-fn build_cmd(cmd_op_code: Opcode) -> Option<CommandPacket> {
-    let pbf = PacketBoundaryFlag::CompleteOrFinal;
-    match cmd_op_code {
-        CoreReset => Some(
-            ResetCommandBuilder { gid: 0, pbf, reset_type: ResetType::ResetConfig }.build().into(),
-        ),
-        CoreInit => Some(
-            InitCommandBuilder { gid: 0, pbf, feature_eneble: FeatureEnable::Rfu }.build().into(),
-        ),
-        _ => {
-            error!("Unsupported command: {}", cmd_op_code);
-            None
-        }
-    }
+    let mut nci = NciApi::new();
+    nci.nfc_enable(nfc_callback).await;
+    nci.nfc_init().await?;
+    nci.nfc_disable().await;
+    nci.nfc_enable(nfc_callback).await;
+    nci.nfc_init().await?;
+    nci.nfc_disable().await;
+    Ok(())
 }
