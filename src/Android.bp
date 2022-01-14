@@ -128,6 +128,7 @@ cc_fuzz {
     srcs: [
         "nfc/nci/*.cc",
         "nfc/nfc/*.cc",
+        "adaptation/debug_lmrt.cc",
         "gki/common/*.cc",
         "gki/ulinux/*.cc",
         "fuzzers/*.cc",
@@ -206,6 +207,7 @@ cc_fuzz {
         "fuzzers/integration/*.cc",
         "fuzzers/integration/fakes/*.cc",
         "gki/common/gki_buffer.cc",
+        "adaptation/debug_lmrt.cc",
         "nfa/ce/*.cc",
         "nfa/dm/*.cc",
         "nfa/ee/*.cc",
