@@ -18,7 +18,6 @@ cc_library_shared {
         "libcutils",
         "liblog",
         "libdl",
-        "libhardware",
         "libz",
         "libchrome",
         "libbase",
@@ -30,6 +29,9 @@ cc_library_shared {
         "android.hardware.nfc@1.0",
         "android.hardware.nfc@1.1",
         "android.hardware.nfc@1.2",
+        // Add for AIDL
+        "android.hardware.nfc-V1-ndk",
+        "libbinder_ndk",
     ],
     static_libs: [
         "libnfcutils",
