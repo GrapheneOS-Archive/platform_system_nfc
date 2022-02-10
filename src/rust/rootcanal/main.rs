@@ -21,16 +21,21 @@ use logger::{self, Config};
 use nfc_packets::nci;
 use nfc_packets::nci::{CommandChild, NciChild};
 use nfc_packets::nci::{
-    ConfigStatus, NciVersion, ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger,
-    ResetType,
+    ConfigParams, ConfigStatus, GetConfigResponseBuilder, NciVersion, ParamIds,
+    ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger, ResetType,
+    SetConfigResponseBuilder,
 };
 use nfc_packets::nci::{InitResponseBuilder, NfccFeatures, RfInterface};
 use nfc_packets::nci::{NciMsgType, NciPacket, Packet, PacketBoundaryFlag};
+use std::collections::HashMap;
 use std::convert::TryInto;
+use std::mem::size_of_val;
+use std::sync::Arc;
 use thiserror::Error;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, ErrorKind};
 use tokio::net::TcpListener;
+use tokio::sync::RwLock;
 
 /// Result type
 type Result<T> = std::result::Result<T, RootcanalError>;
@@ -49,6 +54,38 @@ enum RootcanalError {
     UnsupportedPacket,
 }
 
+/// Provides storage for internal configuration parameters
+#[derive(Clone)]
+pub struct InternalConfiguration {
+    map: Arc<RwLock<HashMap<ParamIds, Vec<u8>>>>,
+}
+
+impl InternalConfiguration {
+    /// InternalConfiguration constructor
+    pub async fn new() -> Self {
+        let ic = InternalConfiguration { map: Arc::new(RwLock::new(HashMap::new())) };
+        let mut map = ic.map.write().await;
+        map.insert(ParamIds::LfT3tMax, vec![0x10u8]);
+        drop(map);
+        ic
+    }
+
+    /// Set a configuration parameter
+    pub async fn set(&mut self, parameter: ParamIds, value: Vec<u8>) {
+        self.map.write().await.insert(parameter, value);
+    }
+
+    /// Gets a parameter value or None
+    pub async fn get(&mut self, parameter: ParamIds) -> Option<Vec<u8>> {
+        self.map.read().await.get(&parameter).map(|v| (*v).clone())
+    }
+
+    /// Clears the allocated storage
+    pub async fn clear(&mut self) {
+        self.map.write().await.clear();
+    }
+}
+
 const TERMINATION: u8 = 4u8;
 
 #[tokio::main]
@@ -63,8 +100,9 @@ async fn main() -> io::Result<()> {
         tokio::spawn(async move {
             let (rd, mut wr) = sock.split();
             let mut rd = BufReader::new(rd);
+            let config = InternalConfiguration::new().await;
             loop {
-                if let Err(e) = process(&mut rd, &mut wr).await {
+                if let Err(e) = process(config.clone(), &mut rd, &mut wr).await {
                     match e {
                         RootcanalError::TerminateTask => break,
                         RootcanalError::IoError(e) => {
@@ -82,7 +120,7 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-async fn process<R, W>(reader: &mut R, writer: &mut W) -> Result<()>
+async fn process<R, W>(config: InternalConfiguration, reader: &mut R, writer: &mut W) -> Result<()>
 where
     R: AsyncReadExt + Unpin,
     W: AsyncWriteExt + Unpin,
@@ -97,7 +135,7 @@ where
     debug!("packet {} received len={}", &pkt_type, &len);
     if pkt_type == NciMsgType::Command as u8 {
         match NciPacket::parse(&frozen) {
-            Ok(p) => command_response(writer, p).await,
+            Ok(p) => command_response(config, writer, p).await,
             Err(_) => Err(RootcanalError::InvalidPacket),
         }
     } else if pkt_type == TERMINATION {
@@ -107,20 +145,23 @@ where
     }
 }
 
-async fn command_response<W>(out: &mut W, cmd: NciPacket) -> Result<()>
+const MAX_PAYLOAD: u8 = 255;
+
+async fn command_response<W>(
+    mut config: InternalConfiguration,
+    out: &mut W,
+    cmd: NciPacket,
+) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
 {
     let pbf = PacketBoundaryFlag::CompleteOrFinal;
     let gid = 0u8;
+    let mut status = nci::Status::Ok;
     match cmd.specialize() {
         NciChild::Command(cmd) => match cmd.specialize() {
             CommandChild::ResetCommand(rst) => {
-                write_nci(
-                    out,
-                    (ResetResponseBuilder { gid, pbf, status: nci::Status::Ok }).build(),
-                )
-                .await?;
+                write_nci(out, (ResetResponseBuilder { gid, pbf, status }).build()).await?;
                 write_nci(
                     out,
                     (ResetNotificationBuilder {
@@ -148,12 +189,12 @@ where
                     (InitResponseBuilder {
                         gid,
                         pbf,
-                        status: nci::Status::Ok,
+                        status,
                         nfcc_features: NfccFeatures::parse(&nfcc_feat).unwrap(),
                         max_log_conns: 0,
                         max_rout_tbls_size: 0x0000,
-                        max_ctrl_payload: 255,
-                        max_data_payload: 255,
+                        max_ctrl_payload: MAX_PAYLOAD,
+                        max_data_payload: MAX_PAYLOAD,
                         num_of_credits: 0,
                         max_nfcv_rf_frame_sz: 64,
                         rf_interface: vec![RfInterface::parse(&rf_int).unwrap(); 1],
@@ -161,6 +202,47 @@ where
                     .build(),
                 )
                 .await
+            }
+            CommandChild::SetConfigCommand(sc) => {
+                for cp in sc.get_params() {
+                    if cp.valm.len() > 251 {
+                        status = nci::Status::InvalidParam;
+                        break;
+                    }
+                    config.set(cp.paramid, cp.valm.clone()).await;
+                }
+                write_nci(
+                    out,
+                    (SetConfigResponseBuilder { gid, pbf, status, paramids: Vec::new() }).build(),
+                )
+                .await
+            }
+            CommandChild::GetConfigCommand(gc) => {
+                let mut cpv: Vec<ConfigParams> = Vec::new();
+                for paramid in gc.get_paramids() {
+                    let mut cp = ConfigParams { paramid: paramid.pids, valm: Vec::new() };
+                    if status == nci::Status::Ok {
+                        if let Some(val) = config.get(paramid.pids).await {
+                            cp.valm = val;
+                        } else {
+                            status = nci::Status::InvalidParam;
+                            cpv.clear();
+                        }
+                    } else if config.get(paramid.pids).await.is_some() {
+                        continue;
+                    }
+                    cpv.push(cp);
+                    // The Status field takes a byte
+                    if size_of_val(&*cpv) > (MAX_PAYLOAD - 1).into() {
+                        cpv.pop();
+                        if status == nci::Status::Ok {
+                            status = nci::Status::MessageSizeExceeded;
+                        }
+                        break;
+                    }
+                }
+                write_nci(out, (GetConfigResponseBuilder { gid, pbf, status, params: cpv }).build())
+                    .await
             }
             _ => Err(RootcanalError::UnsupportedCommand),
         },
