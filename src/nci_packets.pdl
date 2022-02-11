@@ -319,6 +319,12 @@ enum ParamIds : 8 {
   NFCDEP_OP = 0x82,
   LLCP_VERSION = 0x83,
   NFCC_CONFIG_CONTROL = 0x85,
+  PROP0 = 0xa0,
+  PROP1 = 0xa1,
+  PROP2 = 0xa2,
+  PROP3 = 0xa3,
+  PROP4 = 0xa4,
+  PROP5 = 0xa5,
 }
 
 struct ConfigParams {
@@ -336,10 +342,18 @@ packet SetConfigCommand : Command (op = CORE_SET_CONFIG) {
   params : ConfigParams[],
 }
 
+test SetConfigCommand {
+  "\x20\x02\x10\x05\x30\x01\x04\x31\x01\x00\x32\x01\x20\x38\x01\x01\x50\x01\x00",
+}
+
 packet SetConfigResponse : Response (cmd_op = CORE_SET_CONFIG) {
   status : Status,
   _count_(paramids) : 8,
   paramids : ParamList[],
+}
+
+test SetConfigResponse {
+  "\x40\x02\x02\x00\x00",
 }
 
 packet GetConfigCommand : Command (op = CORE_GET_CONFIG) {
@@ -347,10 +361,18 @@ packet GetConfigCommand : Command (op = CORE_GET_CONFIG) {
   paramids : ParamList[],
 }
 
+test GetConfigCommand {
+  "\x20\x03\x02\x01\x52",
+}
+
 packet GetConfigResponse : Response (cmd_op = CORE_GET_CONFIG) {
   status : Status,
   _count_(params) : 8,
   params : ConfigParams[],
+}
+
+test GetConfigResponse {
+  "\x40\x03\x05\x00\x01\x52\x01\x10",
 }
 
 enum RfProtocols : 8 {
