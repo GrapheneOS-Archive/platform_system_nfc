@@ -61,7 +61,7 @@ void nfc_start_timer(TIMER_LIST_ENT* p_tle, uint16_t type, uint32_t timeout) {
   NFC_HDR* p_msg;
 
   /* if timer list is currently empty, start periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.timer_queue)) {
+  if (nfc_cb.timer_queue.p_first == nullptr) {
     /* if timer starts on other than NFC task (scritp wrapper) */
     if (GKI_get_taskid() != NFC_TASK) {
       /* post event to start timer in NFC task */
@@ -111,9 +111,8 @@ void nfc_process_timer_evt(void) {
 
   GKI_update_timer_list(&nfc_cb.timer_queue, 1);
 
-  while (!GKI_timer_list_empty(&nfc_cb.timer_queue) &&
-         !GKI_timer_list_first(&nfc_cb.timer_queue)->ticks) {
-    p_tle = GKI_timer_list_first(&nfc_cb.timer_queue);
+  while ((nfc_cb.timer_queue.p_first) && (!nfc_cb.timer_queue.p_first->ticks)) {
+    p_tle = nfc_cb.timer_queue.p_first;
     GKI_remove_from_timer_list(&nfc_cb.timer_queue, p_tle);
 
     switch (p_tle->event) {
@@ -138,7 +137,7 @@ void nfc_process_timer_evt(void) {
   }
 
   /* if timer list is empty stop periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.timer_queue)) {
+  if (nfc_cb.timer_queue.p_first == nullptr) {
     GKI_stop_timer(NFC_TIMER_ID);
   }
 }
@@ -156,7 +155,7 @@ void nfc_stop_timer(TIMER_LIST_ENT* p_tle) {
   GKI_remove_from_timer_list(&nfc_cb.timer_queue, p_tle);
 
   /* if timer list is empty stop periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.timer_queue)) {
+  if (nfc_cb.timer_queue.p_first == nullptr) {
     GKI_stop_timer(NFC_TIMER_ID);
   }
 }
@@ -179,7 +178,7 @@ void nfc_start_quick_timer(TIMER_LIST_ENT* p_tle, uint16_t type,
   NFC_HDR* p_msg;
 
   /* if timer list is currently empty, start periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.quick_timer_queue)) {
+  if (nfc_cb.quick_timer_queue.p_first == nullptr) {
     /* if timer starts on other than NFC task (scritp wrapper) */
     if (GKI_get_taskid() != NFC_TASK) {
       /* post event to start timer in NFC task */
@@ -217,7 +216,7 @@ void nfc_stop_quick_timer(TIMER_LIST_ENT* p_tle) {
   GKI_remove_from_timer_list(&nfc_cb.quick_timer_queue, p_tle);
 
   /* if timer list is empty stop periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.quick_timer_queue)) {
+  if (nfc_cb.quick_timer_queue.p_first == nullptr) {
     GKI_stop_timer(NFC_QUICK_TIMER_ID);
   }
 }
@@ -236,10 +235,9 @@ void nfc_process_quick_timer_evt(void) {
 
   GKI_update_timer_list(&nfc_cb.quick_timer_queue, 1);
 
-  while (!GKI_timer_list_empty(&nfc_cb.quick_timer_queue) &&
-         (!GKI_timer_list_first(&nfc_cb.quick_timer_queue)->ticks)) {
-    p_tle = GKI_timer_list_first(&nfc_cb.quick_timer_queue);
-
+  while ((nfc_cb.quick_timer_queue.p_first) &&
+         (!nfc_cb.quick_timer_queue.p_first->ticks)) {
+    p_tle = nfc_cb.quick_timer_queue.p_first;
     GKI_remove_from_timer_list(&nfc_cb.quick_timer_queue, p_tle);
 
     switch (p_tle->event) {
@@ -290,7 +288,7 @@ void nfc_process_quick_timer_evt(void) {
   }
 
   /* if timer list is empty stop periodic GKI timer */
-  if (GKI_timer_list_empty(&nfc_cb.quick_timer_queue)) {
+  if (nfc_cb.quick_timer_queue.p_first == nullptr) {
     GKI_stop_timer(NFC_QUICK_TIMER_ID);
   }
 }
