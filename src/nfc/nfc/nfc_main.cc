@@ -785,6 +785,8 @@ void NFC_Init(tHAL_NFC_ENTRY* p_hal_entry_tbl) {
   nfc_cb.nci_ctrl_size = NCI_CTRL_INIT_SIZE;
   nfc_cb.reassembly = true;
   nfc_cb.nci_version = NCI_VERSION_UNKNOWN;
+  GKI_init_timer_list(&nfc_cb.timer_queue);
+  GKI_init_timer_list(&nfc_cb.quick_timer_queue);
   rw_init();
   ce_init();
   llcp_init();
