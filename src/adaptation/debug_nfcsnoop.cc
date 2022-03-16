@@ -16,21 +16,20 @@
  *
  ******************************************************************************/
 
-#include "include/debug_nfcsnoop.h"
-
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <cutils/properties.h>
-#include <fcntl.h>
 #include <resolv.h>
-#include <ringbuffer.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <zlib.h>
-
 #include <mutex>
 
+#include <ringbuffer.h>
+
+#include <cutils/properties.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
 #include "bt_types.h"
+#include "include/debug_nfcsnoop.h"
 #include "nfc_int.h"
 
 #define USEC_PER_SEC 1000000ULL
@@ -215,10 +214,6 @@ error:
 }
 
 bool storeNfcSnoopLogs(std::string filepath, off_t maxFileSize) {
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-  return true;
-#endif
-
   int fileStream;
   off_t fileSize;
   // check file size
