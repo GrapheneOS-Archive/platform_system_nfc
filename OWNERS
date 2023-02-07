@@ -1,5 +1,2 @@
-sattiraju@google.com
-henrichataing@google.com
-jackcwyu@google.com
-georgekgchang@google.com
-alisher@google.com
+# Bug component: 48448
+include platform/packages/apps/Nfc:/OWNERS
