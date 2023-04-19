@@ -774,6 +774,7 @@ tNFC_STATUS rw_t3t_send_next_ndef_update_cmd(tRW_T3T_CB* p_cb) {
     p = p_cmd_start = (uint8_t*)(p_cmd_buf + 1) + p_cmd_buf->offset;
 
     if (p_cb->ndef_msg_len < p_cb->ndef_msg_bytes_sent) {
+      GKI_freebuf(p_cmd_buf);
       return NFC_STATUS_FAILED;
     }
 
@@ -919,6 +920,7 @@ tNFC_STATUS rw_t3t_send_next_ndef_check_cmd(tRW_T3T_CB* p_cb) {
     p = p_cmd_start = (uint8_t*)(p_cmd_buf + 1) + p_cmd_buf->offset;
 
     if (p_cb->ndef_attrib.ln < p_cb->ndef_rx_offset) {
+      GKI_freebuf(p_cmd_buf);
       return NFC_STATUS_FAILED;
     }
 
