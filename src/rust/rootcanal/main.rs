@@ -19,7 +19,7 @@ use bytes::{BufMut, BytesMut};
 use log::{debug, Level};
 use logger::{self, Config};
 use nfc_packets::nci;
-use nfc_packets::nci::{CommandChild, NciChild};
+use nfc_packets::nci::{CommandChild, NciPacketChild};
 use nfc_packets::nci::{
     ConfigParams, ConfigStatus, GetConfigResponseBuilder, NciVersion, ParamIds,
     ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger, ResetType,
@@ -159,7 +159,7 @@ where
     let gid = 0u8;
     let mut status = nci::Status::Ok;
     match cmd.specialize() {
-        NciChild::Command(cmd) => match cmd.specialize() {
+        NciPacketChild::Command(cmd) => match cmd.specialize() {
             CommandChild::ResetCommand(rst) => {
                 write_nci(out, (ResetResponseBuilder { gid, pbf, status }).build()).await?;
                 write_nci(

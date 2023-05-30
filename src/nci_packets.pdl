@@ -73,32 +73,32 @@ enum Status : 8 {
   NFCEE_TIMEOUT_ERROR = 0xC3,
 }
 
-packet Nci {
+packet NciPacket {
   gid : 4,
   pbf : PacketBoundaryFlag,
   mt : NciMsgType,
   _payload_,
 }
 
-packet Command : Nci (mt = COMMAND) {
+packet Command : NciPacket (mt = COMMAND) {
   op : Opcode,
   _size_(_payload_) : 8,
   _payload_,
 }
 
-packet Response : Nci (mt = RESPONSE) {
+packet Response : NciPacket (mt = RESPONSE) {
   cmd_op : Opcode,
   _size_(_payload_) : 8,
   _payload_,
 }
 
-packet Notification : Nci (mt = NOTIFICATION) {
+packet Notification : NciPacket (mt = NOTIFICATION) {
   cmd_op : Opcode,
   _size_(_payload_) : 8,
   _payload_,
 }
 
-packet Data {
+packet DataPacket {
   conn_id : 4,
   pbf : PacketBoundaryFlag,
   _fixed_ =  0x0 : 3,
