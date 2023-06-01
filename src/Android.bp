@@ -319,16 +319,9 @@ cc_fuzz {
 
 genrule {
     name: "NfcGeneratedPackets_rust",
-    tools: [
-        "bluetooth_packetgen",
-    ],
-    cmd: "$(location bluetooth_packetgen) --include=system/nfc/src --out=$(genDir) $(in) --rust",
-    srcs: [
-        "nci_packets.pdl",
-    ],
-    out: [
-        "nci_packets.rs",
-    ],
+    defaults: ["pdl_rust_generator_defaults"],
+    srcs: ["nci_packets.pdl"],
+    out: ["nci_packets.rs"],
 }
 
 rust_library {
