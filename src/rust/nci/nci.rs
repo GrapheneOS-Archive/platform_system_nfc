@@ -18,8 +18,7 @@
 
 use log::{debug, error};
 use nfc_hal::{Hal, HalEventRegistry};
-use nfc_packets::nci::NciChild::{Notification, Response};
-use nfc_packets::nci::{CommandPacket, DataPacket, NotificationPacket, Opcode, ResponsePacket};
+use nfc_packets::nci::{Command, DataPacket, NciPacketChild, Notification, Opcode, Response};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::select;
@@ -71,14 +70,14 @@ struct InternalChannels {
 
 #[derive(Debug)]
 struct PendingCommand {
-    cmd: CommandPacket,
-    response: oneshot::Sender<ResponsePacket>,
+    cmd: Command,
+    response: oneshot::Sender<Response>,
 }
 
 #[derive(Debug)]
 struct QueuedCommand {
     pending: PendingCommand,
-    notification: Option<oneshot::Sender<NotificationPacket>>,
+    notification: Option<oneshot::Sender<Notification>>,
 }
 
 /// Sends raw commands. Only useful for facades & shims, or wrapped as a CommandSender.
@@ -90,15 +89,15 @@ pub struct CommandSender {
 /// The data returned by send_notify() method.
 pub struct ResponsePendingNotification {
     /// Command response
-    pub response: ResponsePacket,
+    pub response: Response,
     /// Pending notification receiver
-    pub notification: oneshot::Receiver<NotificationPacket>,
+    pub notification: oneshot::Receiver<Notification>,
 }
 
 impl CommandSender {
     /// Send a command, but do not expect notification to be returned
-    pub async fn send(&mut self, cmd: CommandPacket) -> Result<ResponsePacket> {
-        let (tx, rx) = oneshot::channel::<ResponsePacket>();
+    pub async fn send(&mut self, cmd: Command) -> Result<Response> {
+        let (tx, rx) = oneshot::channel::<Response>();
         self.cmd_tx
             .send(QueuedCommand {
                 pending: PendingCommand { cmd, response: tx },
@@ -109,12 +108,9 @@ impl CommandSender {
         Ok(event)
     }
     /// Send a command which expects notification as a result
-    pub async fn send_and_notify(
-        &mut self,
-        cmd: CommandPacket,
-    ) -> Result<ResponsePendingNotification> {
-        let (tx, rx) = oneshot::channel::<ResponsePacket>();
-        let (ntx, nrx) = oneshot::channel::<NotificationPacket>();
+    pub async fn send_and_notify(&mut self, cmd: Command) -> Result<ResponsePendingNotification> {
+        let (tx, rx) = oneshot::channel::<Response>();
+        let (ntx, nrx) = oneshot::channel::<Notification>();
         self.cmd_tx
             .send(QueuedCommand {
                 pending: PendingCommand { cmd, response: tx },
@@ -135,12 +131,12 @@ impl Drop for CommandSender {
 /// Provides ability to register and unregister for NCI notifications
 #[derive(Clone)]
 pub struct EventRegistry {
-    handlers: Arc<Mutex<HashMap<Opcode, oneshot::Sender<NotificationPacket>>>>,
+    handlers: Arc<Mutex<HashMap<Opcode, oneshot::Sender<Notification>>>>,
 }
 
 impl EventRegistry {
     /// Indicate interest in specific NCI notification
-    pub async fn register(&mut self, code: Opcode, sender: oneshot::Sender<NotificationPacket>) {
+    pub async fn register(&mut self, code: Opcode, sender: oneshot::Sender<Notification>) {
         assert!(
             self.handlers.lock().await.insert(code, sender).is_none(),
             "A handler for {:?} is already registered",
@@ -149,10 +145,7 @@ impl EventRegistry {
     }
 
     /// Remove interest in specific NCI notification
-    pub async fn unregister(
-        &mut self,
-        code: Opcode,
-    ) -> Option<oneshot::Sender<NotificationPacket>> {
+    pub async fn unregister(&mut self, code: Opcode) -> Option<oneshot::Sender<Notification>> {
         self.handlers.lock().await.remove(&code)
     }
 }
@@ -173,7 +166,7 @@ async fn dispatch(
         select! {
             Some(cmd) = hc.in_cmd_rx.recv() => {
                 match cmd.specialize() {
-                    Response(rsp) => {
+                    NciPacketChild::Response(rsp) => {
                         timeout.as_mut().reset(max_deadline);
                         let this_opcode = rsp.get_cmd_op();
                         match pending.take() {
@@ -182,11 +175,11 @@ async fn dispatch(
                                     error!("failure dispatching command status {:?}", e);
                                 }
                             },
-                            Some(PendingCommand{cmd, ..}) => panic!("Waiting for {}, got {}", cmd.get_op(), this_opcode),
-                            None => panic!("Unexpected status event with opcode {}", this_opcode),
+                            Some(PendingCommand{cmd, ..}) => panic!("Waiting for {:?}, got {:?}", cmd.get_op(), this_opcode),
+                            None => panic!("Unexpected status event with opcode {:?}", this_opcode),
                         }
                     }
-                    Notification(ntfy) => {
+                    NciPacketChild::Notification(ntfy) => {
                         let code = ntfy.get_cmd_op();
                         match ntfs.unregister(code).await {
                             Some(sender) => {

@@ -21,7 +21,7 @@ use nfc_hal::{HalEvent, HalEventRegistry, HalEventStatus};
 use nfc_packets::nci::{self, CommandBuilder, Opcode};
 use nfc_packets::nci::{FeatureEnable, PacketBoundaryFlag, ResetType};
 use nfc_packets::nci::{InitCommandBuilder, ResetCommandBuilder};
-use nfc_packets::nci::{InitResponsePacket, ResponseChild};
+use nfc_packets::nci::{InitResponse, ResponseChild};
 use tokio::sync::oneshot;
 
 /// NCI API object to manage static API data
@@ -36,7 +36,7 @@ pub struct NciApi {
 }
 
 struct NfcData {
-    init_response: Option<InitResponsePacket>,
+    init_response: Option<InitResponse>,
 }
 
 impl NciApi {
