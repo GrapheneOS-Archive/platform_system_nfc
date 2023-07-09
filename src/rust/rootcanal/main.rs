@@ -21,9 +21,9 @@ use logger::{self, Config};
 use nfc_packets::nci;
 use nfc_packets::nci::{CommandChild, NciPacketChild};
 use nfc_packets::nci::{
-    ConfigParams, ConfigStatus, GetConfigResponseBuilder, NciVersion, ParamIds,
-    ResetNotificationBuilder, ResetResponseBuilder, ResetTrigger, ResetType,
-    SetConfigResponseBuilder,
+    ConfigParams, ConfigStatus, ConnCloseResponseBuilder, ConnCreateResponseBuilder,
+    GetConfigResponseBuilder, NciVersion, ParamIds, ResetNotificationBuilder, ResetResponseBuilder,
+    ResetTrigger, ResetType, SetConfigResponseBuilder,
 };
 use nfc_packets::nci::{InitResponseBuilder, NfccFeatures, RfInterface};
 use nfc_packets::nci::{NciMsgType, NciPacket, Packet, PacketBoundaryFlag};
@@ -243,6 +243,18 @@ where
                 }
                 write_nci(out, (GetConfigResponseBuilder { gid, pbf, status, params: cpv }).build())
                     .await
+            }
+            CommandChild::ConnCreateCommand(_ccr) => {
+                let conn_id = 2;
+                write_nci(
+                    out,
+                    (ConnCreateResponseBuilder { gid, pbf, status, mpps: 255, ncreds: 0, conn_id })
+                        .build(),
+                )
+                .await
+            }
+            CommandChild::ConnCloseCommand(_ccl) => {
+                write_nci(out, (ConnCloseResponseBuilder { gid, pbf, status }).build()).await
             }
             _ => Err(RootcanalError::UnsupportedCommand),
         },
