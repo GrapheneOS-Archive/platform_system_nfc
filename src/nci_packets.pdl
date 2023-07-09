@@ -415,16 +415,16 @@ struct NfceeType {
   proto : NfceeProtocols,
 }
 
-struct DestParams {
+struct DestParam {
   ptype : DestParamTypes,
-  _size_(valdsp) : 8,
-  valdsp : 8[],
+  _size_(parameter) : 8,
+  parameter : 8[],
 }
 
 packet ConnCreateCommand : Command (op = CORE_CONN_CREATE) {
   dt : DestTypes,
   _count_(destparams) : 8,
-  destparams : DestParams[],
+  destparams : DestParam[],
 }
 
 packet ConnCreateResponse : Response (cmd_op = CORE_CONN_CREATE) {
@@ -443,7 +443,8 @@ packet ConnCloseResponse : Response (cmd_op = CORE_CONN_CLOSE) {
 }
 
 struct CreditsPerConn {
-  conn_id : 8,
+  conn_id : 4,
+  rfu : 4,
   ncredits : 8,
 }
 
@@ -461,3 +462,135 @@ packet InterfaceError : Notification (cmd_op = CORE_INTERFACE_ERROR) {
   conn_id : 8,
 }
 
+enum RfMode : 8 {
+  POLL = 0x1,
+  LISTEN = 0x2,
+}
+
+enum RfInterfaceType : 8 {
+  NFCEE_DIRECT = 0x0,
+  FRAME = 0x1,
+  ISO_DEP = 0x2,
+  NFC_DEP = 0x3,
+  NDEF = 0x6,
+}
+
+struct RfMappingConfiguration {
+  rf_proto : RfProtocols,
+  mode : RfMode,
+  intf : RfInterfaceType,
+}
+
+packet RfDiscoverMapCommand : Command (op = RF_DISCOVER_MAP) {
+  _count_(map_configs) : 8,
+  map_configs : RfMappingConfiguration[],
+}
+
+packet RfDiscoverMapResponse : Response (cmd_op = RF_DISCOVER_MAP) {
+  status : Status,
+}
+
+enum More : 8 {
+  LAST = 0x0,
+  MORE = 0x1,
+}
+
+enum ListenModeREntryType : 4 {
+  TECH = 0,
+  PROTO = 1,
+  AID = 2,
+  SYSCODE = 3,
+  PATTERN = 4,
+}
+
+struct QualifierType {
+  lmr_type : ListenModeREntryType,
+  long_ok : 1,
+  short_ok : 1,
+  block : 1,
+  _fixed_ = 0 : 1,
+}
+
+struct RoutingEntry {
+  qt : QualifierType,
+  _size_(valr) : 8,
+  valr : 8[],
+}
+
+enum NfcEeID : 8 {
+  DH = 0x0,
+  HCI = 0x1,
+}
+
+struct PowerState {
+  _fixed_ = 0x0 : 2,
+  subst3 : 1,
+  subst2 : 1,
+  subst1 : 1,
+  batt_off : 1,
+  switch_off : 1,
+  switch_on : 1,
+}
+
+enum Technology : 8 {
+  TECH_A = 0x0,
+  TECH_B = 0x1,
+  TECH_F = 0x2,
+  TECH_V = 0x3,
+}
+
+struct TechRE {
+  id : 8, // NfcEeID 0x80-0xfe dynamic HCI-EEs, 0x10-0x7f other synamic EEs
+  pstate : PowerState,
+  tech : Technology,
+}
+
+struct ProtoRE {
+  id : 8,
+  pstate : PowerState,
+  proto : RfProtocols,
+}
+
+struct CommonRE {
+  id : 8,
+  pstate: PowerState,
+  _payload_,
+}
+
+packet RfSetListenModeRoutingCommand : Command (op = RF_SET_LISTEN_MODE_ROUTING) {
+  more : More,
+  _count_(entries) : 8,
+  entries : RoutingEntry[],
+}
+
+packet RfSetListenModeRoutingResponse : Response (cmd_op = RF_SET_LISTEN_MODE_ROUTING) {
+  status : Status,
+}
+
+packet RfGetListenModeRoutingCommand : Command (op = RF_GET_LISTEN_MODE_ROUTING) {
+}
+
+packet RfGetListenModeRoutingResponse : Response (cmd_op = RF_GET_LISTEN_MODE_ROUTING) {
+  status : Status,
+}
+
+packet RfGetListenModeRoutingNotification : Notification (cmd_op = RF_GET_LISTEN_MODE_ROUTING) {
+  more : More,
+  _count_(entries) : 8,
+  entries : RoutingEntry[],
+}
+
+enum PowerSubState : 8 {
+  SWITCHED_ON = 0x0,
+  SO_SUBSTATE1 = 0x1,
+  SO_SUBSTATE2 = 0x2,
+  SO_SUBSTATE3 = 0x3,
+}
+
+packet SetPowerSubStateCommand  : Command (op = CORE_SET_POWER_SUBSTATE) {
+  pstate : PowerSubState,
+}
+
+packet SetPowerSubStateResponse  : Response (cmd_op = CORE_SET_POWER_SUBSTATE) {
+  status : Status,
+}
