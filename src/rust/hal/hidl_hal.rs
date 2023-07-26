@@ -51,6 +51,7 @@ pub async fn init() -> Hal {
 #[cxx::bridge(namespace = nfc::hal)]
 // TODO Either use or remove these functions, this shouldn't be the long term state
 #[allow(dead_code)]
+#[allow(unsafe_op_in_unsafe_fn)]
 mod ffi {
 
     #[repr(u32)]
