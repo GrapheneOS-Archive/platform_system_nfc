@@ -603,10 +603,10 @@ static void nfa_ee_conn_cback(uint8_t conn_id, tNFC_CONN_EVT event,
 *******************************************************************************/
 int nfa_ee_find_max_aid_cfg_len(void) {
   int max_lmrt_size = NFC_GetLmrtSize();
-  if (max_lmrt_size) {
+  if (max_lmrt_size > NFA_EE_MAX_PROTO_TECH_EXT_ROUTE_LEN) {
     return max_lmrt_size - NFA_EE_MAX_PROTO_TECH_EXT_ROUTE_LEN;
   } else {
-    return NFA_EE_MAX_AID_CFG_LEN;
+    return 0;
   }
 }
 
