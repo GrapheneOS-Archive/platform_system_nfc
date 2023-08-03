@@ -130,7 +130,7 @@ void nfa_ee_sys_enable(void) {
 
   if (NfcConfig::hasKey(NAME_NFA_AID_BLOCK_ROUTE)) {
     unsigned retlen = NfcConfig::getUnsigned(NAME_NFA_AID_BLOCK_ROUTE);
-    if ((retlen == 0x01) && (NFC_GetNCIVersion() == NCI_VERSION_2_0)) {
+    if ((retlen == 0x01) && (NFC_GetNCIVersion() >= NCI_VERSION_2_0)) {
       nfa_ee_cb.route_block_control = NCI_ROUTE_QUAL_BLOCK_ROUTE;
       DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
           "nfa_ee_cb.route_block_control=0x%x", nfa_ee_cb.route_block_control);
