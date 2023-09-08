@@ -19,6 +19,13 @@ genrule {
     out: ["nci_packets.rs"],
 }
 
+genrule {
+    name: "casimir_rf_packets_rust_gen",
+    defaults: ["pdl_rust_generator_defaults"],
+    srcs: ["src/rf_packets.pdl"],
+    out: ["rf_packets.rs"],
+}
+
 rust_binary_host {
     name: "casimir",
     crate_name: "casimir",
@@ -26,6 +33,7 @@ rust_binary_host {
     srcs: [
         "src/main.rs",
         ":casimir_nci_packets_rust_gen",
+        ":casimir_rf_packets_rust_gen",
     ],
     rustlibs: [
         "libanyhow",
