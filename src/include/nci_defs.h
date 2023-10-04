@@ -210,6 +210,7 @@
 #define NCI_MSG_RF_EE_DISCOVERY_REQ 10
 #define NCI_MSG_RF_PARAMETER_UPDATE 11
 #define NCI_MSG_RF_ISO_DEP_NAK_PRESENCE 16
+#define NCI_MSG_WPT_START 21
 
 /**********************************************
  * NFCEE MANAGEMENT Group Opcode - 2
@@ -334,6 +335,10 @@
 #define NCI_DEACTIVATE_REASON_NFCB_BAD_AFI 3 /* NFC-B Bad AFI    */
 /* DH Request Failed due to error */
 #define NCI_DEACTIVATE_REASON_DH_REQ_FAILED 4
+#define NCI_DEACTIVATE_REASON_RF_REMOTE_EP_REMOVED 5
+#define NCI_DEACTIVATE_REASON_RF_TIMEOUT_EXCEPTION 6
+#define NCI_DEACTIVATE_REASON_RF_PROTOCOL_EXCEPTION 7
+#define NCI_DEACTIVATE_REASON_FO_DETECTED 8
 
 /* The NFCEE status in NFCEE Status Notification */
 typedef uint8_t tNCI_EE_NTF_STATUS;
@@ -357,6 +362,11 @@ typedef uint8_t tNCI_NFCEE_PL_CONFIG;
 #define NCI_INTERFACE_EXTENSION_MAX 2
 #define NCI_INTERFACE_FIRST_VS 0x80
 typedef uint8_t tNCI_INTF_TYPE;
+
+/**********************************************
+ * NCI RF Interface Extensions Types
+ **********************************************/
+#define NCI_INTF_EXT_WLCP_SEMI_AUTO 0x03
 
 /**********************************************
  * NCI RF Management / DISCOVERY Group Params
@@ -709,5 +719,8 @@ typedef struct {
   uint8_t waiting_time;                     /* WT -> Response Waiting Time
                                                RWT = (256 x 16/fC) x 2WT    */
 } tNCI_RF_ACM_P_PARAMS;
+
+#define NCI_WPT_POWER_ADJ_REQ_TYPE 0x00
+#define NCI_WPT_TIME_INT_TYPE 0x01
 
 #endif /* NFC_NCI_DEFS_H */
