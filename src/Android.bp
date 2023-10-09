@@ -7,7 +7,7 @@ package {
     default_applicable_licenses: ["system_nfc_license"],
 }
 
-cc_library_shared {
+cc_library {
     arch: {
         arm: {
             instruction_set: "arm",
@@ -21,20 +21,21 @@ cc_library_shared {
         "libz",
         "libchrome",
         "libbase",
-        "libstatslog_nfc",
-
         // Treble configuration
         "libhidlbase",
         "libutils",
+        "libbinder_ndk",
+        "libstatssocket",
+	"libz",
+    ],
+    static_libs: [
         "android.hardware.nfc@1.0",
         "android.hardware.nfc@1.1",
         "android.hardware.nfc@1.2",
         // Add for AIDL
         "android.hardware.nfc-V1-ndk",
-        "libbinder_ndk",
-    ],
-    static_libs: [
         "libnfcutils",
+        "libstatslog_nfc",
     ],
     cflags: [
         "-DDYN_ALLOC=1",
@@ -83,7 +84,11 @@ cc_library_shared {
         integer_overflow: true,
         scs: true,
     },
-
+    stl: "libc++_static",
+    apex_available: [
+         "//apex_available:platform",
+	 "com.android.nfcservices"
+    ],
 }
 
 cc_defaults {
@@ -154,6 +159,10 @@ cc_library {
             enabled: false,
         },
     },
+    apex_available: [
+         "//apex_available:platform",
+	 "com.android.nfcservices"
+    ],
 }
 
 genrule {
