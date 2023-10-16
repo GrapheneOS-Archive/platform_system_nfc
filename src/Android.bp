@@ -26,7 +26,6 @@ cc_library {
         "libutils",
         "libbinder_ndk",
         "libstatssocket",
-	"libz",
     ],
     static_libs: [
         "android.hardware.nfc@1.0",
