@@ -317,12 +317,10 @@ rust_library {
     crate_name: "nfc_packets",
     srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
     host_supported: true,
-    proc_macros: ["libnum_derive"],
     rustlibs: [
         "libbytes",
-        "libnum_traits",
-        "libthiserror",
         "liblog_rust",
+        "libpdl_runtime",
     ],
 }
 
@@ -331,11 +329,9 @@ rust_test_host {
     defaults: ["nfc_rust_defaults"],
     srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
     test_suites: ["general-tests"],
-    proc_macros: ["libnum_derive"],
     rustlibs: [
         "libbytes",
-        "libnum_traits",
-        "libthiserror",
         "liblog_rust",
+        "libpdl_runtime",
     ],
 }
