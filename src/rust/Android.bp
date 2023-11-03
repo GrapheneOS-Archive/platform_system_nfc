@@ -36,6 +36,7 @@ rust_library {
         "libnfc_packets",
         "libbytes",
         "libnfc_hal",
+        "libpdl_runtime",
         "libtokio",
         "libcxx",
         "liblazy_static",
@@ -53,6 +54,7 @@ rust_library {
     rustlibs: [
         "libnfc_packets",
         "libbytes",
+        "libpdl_runtime",
         "libthiserror",
         "libtokio",
         "libcxx",
