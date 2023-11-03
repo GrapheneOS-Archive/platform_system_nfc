@@ -26,7 +26,8 @@ use nfc_packets::nci::{
     ResetTrigger, ResetType, SetConfigResponseBuilder,
 };
 use nfc_packets::nci::{InitResponseBuilder, NfccFeatures, RfInterface};
-use nfc_packets::nci::{NciMsgType, NciPacket, Packet, PacketBoundaryFlag};
+use nfc_packets::nci::{NciMsgType, NciPacket, PacketBoundaryFlag};
+use pdl_runtime::Packet;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::mem::size_of_val;

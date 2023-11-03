@@ -39,9 +39,9 @@ rust_binary_host {
         "libanyhow",
         "libargh",
         "libtokio",
-        "libthiserror",
         "libbytes",
         "libfutures",
+        "libpdl_runtime",
     ],
 }
 
