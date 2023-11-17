@@ -70,4 +70,5 @@ cc_library_headers {
     header_libs: ["pdl_cxx_packet_runtime"],
     export_generated_headers: ["casimir_rf_packets_cxx_gen"],
     export_header_lib_headers: ["pdl_cxx_packet_runtime"],
+    host_supported: true,
 }
