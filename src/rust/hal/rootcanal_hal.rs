@@ -31,7 +31,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 /// Initialize the module
 pub async fn init() -> Hal {
     let (raw_hal, inner_hal) = InnerHal::new();
-    let (reader, writer) = TcpStream::connect("127.0.0.1:54323")
+    let (reader, writer) = TcpStream::connect("127.0.0.1:7000")
         .await
         .expect("unable to create stream to rootcanal")
         .into_split();
