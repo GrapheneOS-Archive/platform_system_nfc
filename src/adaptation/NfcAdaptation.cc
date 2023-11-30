@@ -729,7 +729,7 @@ void NfcAdaptation::InitializeHalDeviceContext() {
   if (mHal == nullptr) {
     // Try get AIDL
     ::ndk::SpAIBinder binder(
-        AServiceManager_getService(NFC_AIDL_HAL_SERVICE_NAME.c_str()));
+        AServiceManager_waitForService(NFC_AIDL_HAL_SERVICE_NAME.c_str()));
     mAidlHal = INfcAidl::fromBinder(binder);
     if (mAidlHal != nullptr) {
       use_aidl = true;
