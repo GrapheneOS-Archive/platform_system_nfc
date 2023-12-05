@@ -1365,6 +1365,12 @@ static void rw_mfc_process_error() {
 
   /* Retry sending command if retry-count < max */
   if (rw_cb.cur_retry < RW_MAX_RETRIES) {
+    /* check if buffer is NULL due to NFC Off request in parellel */
+    if (!p_mfc->p_cur_cmd_buf) {
+      DLOG_IF(ERROR, nfc_debug_enabled)
+          << StringPrintf("%s: p_mfc->p_cur_cmd_buf null", __func__);
+      return;
+    }
     /* retry sending the command */
     rw_cb.cur_retry++;
 
