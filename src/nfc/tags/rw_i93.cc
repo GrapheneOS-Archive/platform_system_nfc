@@ -24,6 +24,7 @@
  ******************************************************************************/
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
+#include <com_android_nfc_nci_flags.h>
 #include <log/log.h>
 #include <string.h>
 
@@ -35,6 +36,7 @@
 #include "rw_int.h"
 
 using android::base::StringPrintf;
+using com::android::nfc::nci::flags::t5t_no_getsysinfo;
 
 extern unsigned char appl_dta_mode_flag;
 
@@ -3204,6 +3206,16 @@ void rw_i93_process_timeout(TIMER_LIST_ENT* p_tle) {
       rw_cb.tcb.i93.p_retry_cmd = nullptr;
       rw_cb.tcb.i93.retry_count = 0;
     }
+
+    if (t5t_no_getsysinfo() &&
+        ((rw_cb.tcb.i93.sent_cmd == I93_CMD_GET_SYS_INFO) ||
+         (rw_cb.tcb.i93.sent_cmd == I93_CMD_EXT_GET_SYS_INFO))) {
+      /* read CC in the first block */
+      rw_cb.tcb.i93.intl_flags = 0;
+      rw_i93_send_cmd_read_single_block(0x0000, false);
+      rw_cb.tcb.i93.sub_state = RW_I93_SUBSTATE_WAIT_CC;
+      return;
+    }
     rw_i93_handle_error(NFC_STATUS_TIMEOUT);
   } else {
     LOG(ERROR) << StringPrintf("%s - unknown event=%d", __func__, p_tle->event);
@@ -3980,7 +3992,8 @@ tNFC_STATUS RW_I93DetectNDef(void) {
 
   } else if (((rw_cb.tcb.i93.num_block == 0) ||
               (rw_cb.tcb.i93.block_size == 0)) &&
-             (!appl_dta_mode_flag)) {
+             RW_I93CheckLegacyProduct(rw_cb.tcb.i93.uid[1],
+                                      rw_cb.tcb.i93.uid[2])) {
     status =
         rw_i93_send_cmd_get_sys_info(rw_cb.tcb.i93.uid, I93_FLAG_PROT_EXT_NO);
     sub_state = RW_I93_SUBSTATE_WAIT_SYS_INFO;
@@ -4279,6 +4292,62 @@ tNFC_STATUS RW_I93PresenceCheck(void) {
   }
 
   return (status);
+}
+
+/*****************************************************************************
+**
+** Function         RW_I93CheckLegacyProduct
+**
+** Description      Check if product is legacy and if its definition
+**                  (blocks size, number of blocks) needs to be retrieved
+**                  with (Extended)GetSystemInfo command.
+**
+** Returns          true if legacy product
+**                  else false
+**
+*****************************************************************************/
+bool RW_I93CheckLegacyProduct(uint8_t ic_manuf, uint8_t pdt_code) {
+  if (!t5t_no_getsysinfo()) return true;
+  if (appl_dta_mode_flag) return false;
+  LOG(DEBUG) << StringPrintf("%s - IC manufacturer:0x%x, Product code:0x%x",
+                             __func__, ic_manuf, pdt_code);
+
+  uint8_t pdt_code_family = 0;
+
+  if (ic_manuf == I93_UID_IC_MFG_CODE_NXP) {
+    LOG(DEBUG) << StringPrintf("%s - No I93 legacy product detected", __func__);
+    return false;
+  }
+
+  if (ic_manuf == I93_UID_IC_MFG_CODE_STM) {
+    pdt_code_family = pdt_code & I93_IC_REF_STM_MASK;
+    switch (pdt_code_family) {
+      case I93_IC_REF_STM_LRI1K:
+      case I93_PROD_CODE_STM_M24LR04E_R_MASK:
+      case I93_PROD_CODE_STM_LRI2K_MASK:
+      case I93_PROD_CODE_STM_LRIS2K_MASK:
+      case I93_PROD_CODE_STM_LRIS64K_MASK:
+      case I93_PROD_CODE_STM_M24LR16E_R_MASK:
+      case I93_PROD_CODE_STM_M24LR64_R_MASK:
+      case I93_PROD_CODE_STM_M24LR64E_R_MASK:
+        LOG(DEBUG) << StringPrintf("%s - ISO 15693 legacy product detected",
+                                   __func__);
+        return true;
+      default:
+        LOG(DEBUG) << StringPrintf("%s - T5T NFC Forum product detected",
+                                   __func__);
+        return false;
+    }
+  }
+
+  if ((ic_manuf == I93_UID_IC_MFG_CODE_TI) ||
+      (ic_manuf == I93_UID_IC_MFG_CODE_ONS)) {
+    LOG(DEBUG) << StringPrintf("%s - I93 legacy product detected", __func__);
+    return true;
+  }
+
+  LOG(DEBUG) << StringPrintf("%s - T5T NFC Forum product detected", __func__);
+  return false;
 }
 
 /*****************************************************************************
