@@ -22,6 +22,7 @@ use core::time::Duration;
 use pdl_runtime::Packet;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 use tokio::time;
@@ -85,6 +86,14 @@ pub enum RfMode {
     Listen,
 }
 
+// Whether Observe Mode is Enabled or Disabled.
+#[derive(Clone, Copy, Debug)]
+#[allow(missing_docs)]
+pub enum ObserveModeState {
+    Enable,
+    Disable,
+}
+
 /// Poll responses received in the context of RF discovery in active
 /// Listen mode.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -104,6 +113,8 @@ pub struct State {
     pub discover_map: Vec<nci::MappingConfiguration>,
     pub rf_state: RfState,
     pub rf_poll_responses: Vec<RfPollResponse>,
+    pub observe_mode: ObserveModeState,
+    pub start_time: std::time::Instant,
 }
 
 /// State of an NFCC instance.
@@ -180,6 +191,8 @@ impl Controller {
                 discover_configuration: vec![],
                 rf_state: RfState::Idle,
                 rf_poll_responses: vec![],
+                observe_mode: ObserveModeState::Disable,
+                start_time: Instant::now(),
             }),
         }
     }
@@ -696,10 +709,23 @@ impl Controller {
         Ok(())
     }
 
+    async fn android_observe_mode(&self, cmd: nci::AndroidObserveModeCmd) -> Result<()> {
+        let mut state = self.state.lock().await;
+        state.observe_mode = match cmd.get_observe_mode_enable() {
+            nci::ObserveModeEnable::Enable => ObserveModeState::Enable,
+            nci::ObserveModeEnable::Disable => ObserveModeState::Disable,
+        };
+        println!("+ observe_mode: {:?}", state.observe_mode);
+        self.send_control(nci::AndroidObserveModeRspBuilder { status: nci::Status::Ok }).await?;
+        Ok(())
+    }
+
     async fn receive_command(&self, packet: nci::ControlPacket) -> Result<()> {
+        use nci::AndroidPacketChild::*;
         use nci::ControlPacketChild::*;
         use nci::CorePacketChild::*;
         use nci::NfceePacketChild::*;
+        use nci::ProprietaryPacketChild::*;
         use nci::RfPacketChild::*;
 
         match packet.specialize() {
@@ -725,6 +751,15 @@ impl Controller {
             NfceePacket(packet) => match packet.specialize() {
                 NfceeDiscoverCommand(cmd) => self.nfcee_discover(cmd).await,
                 _ => unimplemented!("unsupported nfcee oid {:?}", packet.get_oid()),
+            },
+            ProprietaryPacket(packet) => match packet.specialize() {
+                AndroidPacket(packet) => match packet.specialize() {
+                    AndroidObserveModeCmd(cmd) => self.android_observe_mode(cmd).await,
+                    _ => {
+                        unimplemented!("unsupported android oid {:?}", packet.get_android_sub_oid())
+                    }
+                },
+                _ => unimplemented!("unsupported proprietary oid {:?}", packet.get_oid()),
             },
             _ => unimplemented!("unsupported gid {:?}", packet.get_gid()),
         }
@@ -810,8 +845,24 @@ impl Controller {
         if state.rf_state != RfState::Discovery {
             return Ok(());
         }
-
         let technology = cmd.get_technology();
+
+        let ts_u32 = state.start_time.elapsed().as_millis() as u32;
+        let frame_type = match technology {
+            rf::Technology::NfcA => nci::PollingFrameType::Reqa,
+            rf::Technology::NfcB => nci::PollingFrameType::Reqb,
+            rf::Technology::NfcF => nci::PollingFrameType::Reqf,
+            _ => todo!(),
+        };
+
+        self.send_control(nci::AndroidPollingLoopNtfBuilder {
+            timestamp: ts_u32,
+            gain: 2,
+            frametype: frame_type,
+            polling_frame_data: vec![],
+        })
+        .await?;
+
         if state.discover_configuration.iter().any(|config| {
             matches!(
                 (config.technology_and_mode, technology),
@@ -820,8 +871,9 @@ impl Controller {
                     | (nci::RfTechnologyAndMode::NfcFPassiveListenMode, rf::Technology::NfcF)
             )
         }) {
-            match technology {
-                rf::Technology::NfcA => {
+            match (state.observe_mode, technology) {
+                (ObserveModeState::Enable, _) => (),
+                (ObserveModeState::Disable, rf::Technology::NfcA) => {
                     // Configured for T4AT tag emulation.
                     let int_protocol = 0x01;
                     self.send_rf(rf::NfcAPollResponseBuilder {
@@ -833,8 +885,8 @@ impl Controller {
                     })
                     .await?
                 }
-                rf::Technology::NfcB => todo!(),
-                rf::Technology::NfcF => todo!(),
+                (ObserveModeState::Disable, rf::Technology::NfcB) => todo!(),
+                (ObserveModeState::Disable, rf::Technology::NfcF) => todo!(),
                 _ => (),
             }
         }
