@@ -243,6 +243,8 @@ enum {
   NFA_DM_RF_DEACTIVATE_CMD,      /* deactivate RF interface               */
   NFA_DM_RF_DEACTIVATE_RSP,      /* deactivate response from NFCC         */
   NFA_DM_RF_DEACTIVATE_NTF,      /* deactivate RF interface NTF from NFCC */
+  NFA_DM_WPT_START_CMD,          /* start WPT phase                       */
+  NFA_DM_WPT_START_RSP,          /* start WPT response from NFCC          */
   NFA_DM_LP_LISTEN_CMD,          /* NFCC is listening in low power mode   */
   NFA_DM_CORE_INTF_ERROR_NTF,    /* RF interface error NTF from NFCC      */
   NFA_DM_DISC_SM_MAX_EVENT
@@ -256,10 +258,17 @@ typedef struct {
   tNFA_INTF_TYPE rf_interface;
 } tNFA_DM_DISC_SELECT_PARAMS;
 
+/* DM WPT data */
+typedef struct {
+  uint8_t power_adj_req;
+  uint8_t wpt_time_int;
+} tNFA_DM_DISC_WPT_START_PARAMS;
+
 typedef union {
   tNFC_DISCOVER nfc_discover;        /* discovery data from NFCC    */
   tNFC_DEACT_TYPE deactivate_type;   /* deactivation type           */
   tNFA_DM_DISC_SELECT_PARAMS select; /* selected target information */
+  tNFA_DM_DISC_WPT_START_PARAMS start_wpt; /*  start power transfer */
 } tNFA_DM_RF_DISC_DATA;
 
 /* Callback event from NFA DM RF Discovery to other NFA sub-modules */
@@ -438,6 +447,14 @@ typedef struct {
 #define NFA_DM_FLAGS_LISTEN_DISABLED 0x00001000
 /* Power Off Sleep                                                      */
 #define NFA_DM_FLAGS_POWER_OFF_SLEEP 0x00008000
+
+/* Response to WLC RF Interface Extension start is not reported yet     */
+#define NFA_DM_FLAGS_ENABLE_WLCP_PEND 0x00010000
+/* WLCP RF Extension is started                                         */
+#define NFA_DM_FLAGS_RF_EXT_ACTIVE 0x00020000
+/* WLCP is ready to charge                                              */
+#define NFA_DM_FLAGS_WLCP_ENABLED 0x00040000
+
 /* stored parameters */
 typedef struct {
   uint8_t total_duration[NCI_PARAM_LEN_TOTAL_DURATION];
@@ -656,6 +673,9 @@ bool nfa_dm_is_active(void);
 tNFC_STATUS nfa_dm_disc_sleep_wakeup(void);
 tNFC_STATUS nfa_dm_disc_start_kovio_presence_check(void);
 bool nfa_dm_is_raw_frame_session(void);
+
+void nfa_dm_start_wireless_power_transfer(uint8_t power_adj_req,
+                                          uint8_t wpt_time_int);
 
 #if (NFC_NFCEE_INCLUDED == FALSE)
 #define nfa_ee_get_tech_route(ps, ha) \

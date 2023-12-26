@@ -979,6 +979,38 @@ void nfc_ncif_proc_isodep_nak_presence_check_status(uint8_t status,
                                                     bool is_ntf) {
   rw_t4t_handle_isodep_nak_rsp(status, is_ntf);
 }
+
+/*******************************************************************************
+**
+** Function         nfc_ncif_proc_charging_status
+**
+** Description      This function is called to process WPT start response
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfc_ncif_proc_charging_status(uint8_t* p, uint8_t len) {
+  tNFC_DISCOVER evt_data;
+
+  if (len != 1) {
+    evt_data.status = NCI_STATUS_FAILED;
+    LOG(ERROR) << StringPrintf("%s; bad len:0x%x", __func__, len);
+    goto invalid_packet;
+  }
+
+  evt_data.status = NCI_STATUS_OK;
+  /* Return WPT End Condition */
+  evt_data.wpt_result = *p;
+
+  DLOG_IF(INFO, nfc_debug_enabled)
+      << StringPrintf("%s; wpt_result=%d", __func__, evt_data.wpt_result);
+
+invalid_packet:
+  if (nfc_cb.p_discv_cback) {
+    (*nfc_cb.p_discv_cback)(NFC_WPT_RESULT_DEVT, &evt_data);
+  }
+}
+
 /*******************************************************************************
 **
 ** Function         nfc_ncif_proc_activate
