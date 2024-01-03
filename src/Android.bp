@@ -141,16 +141,13 @@ cc_library {
     generated_sources: ["statslog_nfc.cpp"],
     generated_headers: ["statslog_nfc.h"],
     export_generated_headers: ["statslog_nfc.h"],
+    shared_libs: [
+        "libstatssocket",
+    ],
     target: {
-        android: {
-            shared_libs: [
-                "libstatssocket",
-            ],
-        },
         host: {
             static_libs: [
                 "libbase",
-                "libstatssocket",
             ],
         },
         darwin: {
@@ -158,7 +155,7 @@ cc_library {
         },
     },
     apex_available: [
-         "//apex_available:platform",
+        "//apex_available:platform",
         "com.android.nfcservices"
     ],
 }
