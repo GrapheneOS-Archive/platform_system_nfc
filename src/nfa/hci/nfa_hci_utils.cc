@@ -21,8 +21,8 @@
  *  This file contains the utility functions for the NFA HCI.
  *
  ******************************************************************************/
+#include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <base/logging.h>
 #include <log/log.h>
 
 #include <string>
@@ -33,8 +33,6 @@
 #include "nfa_hci_int.h"
 
 using android::base::StringPrintf;
-
-extern bool nfc_debug_enabled;
 
 static void handle_debug_loopback(NFC_HDR* p_buf, uint8_t type,
                                   uint8_t instruction);
@@ -273,7 +271,7 @@ tNFA_HCI_DYN_GATE* nfa_hciu_alloc_gate(uint8_t gate_id,
       pg->gate_owner = app_handle;
       pg->pipe_inx_mask = 0;
 
-      DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
+      LOG(DEBUG) << StringPrintf(
           "nfa_hciu_alloc_gate id:%d  app_handle: 0x%04x", gate_id, app_handle);
 
       nfa_hci_cb.nv_write_needed = true;
@@ -316,11 +314,11 @@ tNFA_STATUS nfa_hciu_send_msg(uint8_t pipe_id, uint8_t type,
   const uint8_t MAX_BUFF_SIZE = 100;
   char buff[MAX_BUFF_SIZE];
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_send_msg pipe_id:%d   %s  len:%d", pipe_id,
-                      nfa_hciu_get_type_inst_names(pipe_id, type, instruction,
-                                                   buff, MAX_BUFF_SIZE),
-                      msg_len);
+  LOG(DEBUG) << StringPrintf(
+      "nfa_hciu_send_msg pipe_id:%d   %s  len:%d", pipe_id,
+      nfa_hciu_get_type_inst_names(pipe_id, type, instruction, buff,
+                                   MAX_BUFF_SIZE),
+      msg_len);
 
   if (instruction == NFA_HCI_ANY_GET_PARAMETER)
     nfa_hci_cb.param_in_use = *p_msg;
@@ -413,7 +411,7 @@ uint8_t nfa_hciu_get_allocated_gate_list(uint8_t* p_gate_list) {
     }
   }
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf("returns: %u", count);
+  LOG(DEBUG) << StringPrintf("returns: %u", count);
 
   return (count);
 }
@@ -443,8 +441,8 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_alloc_pipe(uint8_t pipe_id) {
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
        xx++, pp++) {
     if (pp->pipe_id == 0) {
-      DLOG_IF(INFO, nfc_debug_enabled)
-          << StringPrintf("nfa_hciu_alloc_pipe:%d, index:%d", pipe_id, xx);
+      LOG(DEBUG) << StringPrintf("nfa_hciu_alloc_pipe:%d, index:%d", pipe_id,
+                                 xx);
       pp->pipe_id = pipe_id;
 
       nfa_hci_cb.nv_write_needed = true;
@@ -452,8 +450,8 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_alloc_pipe(uint8_t pipe_id) {
     }
   }
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_alloc_pipe:%d, NO free entries !!", pipe_id);
+  LOG(DEBUG) << StringPrintf("nfa_hciu_alloc_pipe:%d, NO free entries !!",
+                             pipe_id);
   return (nullptr);
 }
 
@@ -470,9 +468,9 @@ void nfa_hciu_release_gate(uint8_t gate_id) {
   tNFA_HCI_DYN_GATE* p_gate = nfa_hciu_find_gate_by_gid(gate_id);
 
   if (p_gate != nullptr) {
-    DLOG_IF(INFO, nfc_debug_enabled)
-        << StringPrintf("ID: %d  owner: 0x%04x  pipe_inx_mask: 0x%04x", gate_id,
-                        p_gate->gate_owner, p_gate->pipe_inx_mask);
+    LOG(DEBUG) << StringPrintf("ID: %d  owner: 0x%04x  pipe_inx_mask: 0x%04x",
+                               gate_id, p_gate->gate_owner,
+                               p_gate->pipe_inx_mask);
 
     p_gate->gate_id = 0;
     p_gate->gate_owner = 0;
@@ -517,7 +515,7 @@ tNFA_HCI_RESPONSE nfa_hciu_add_pipe_to_gate(uint8_t pipe_id, uint8_t local_gate,
       pipe_index = (uint8_t)(p_pipe - nfa_hci_cb.cfg.dyn_pipes);
       p_gate->pipe_inx_mask |= (uint32_t)(1 << pipe_index);
 
-      DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
+      LOG(DEBUG) << StringPrintf(
           "nfa_hciu_add_pipe_to_gate  Gate ID: 0x%02x  Pipe ID: 0x%02x  "
           "pipe_index: %u  App Handle: 0x%08x",
           local_gate, pipe_id, pipe_index, p_gate->gate_owner);
@@ -525,8 +523,8 @@ tNFA_HCI_RESPONSE nfa_hciu_add_pipe_to_gate(uint8_t pipe_id, uint8_t local_gate,
     }
   }
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
-      "nfa_hciu_add_pipe_to_gate: 0x%02x  NOT FOUND", local_gate);
+  LOG(DEBUG) << StringPrintf("nfa_hciu_add_pipe_to_gate: 0x%02x  NOT FOUND",
+                             local_gate);
 
   return (NFA_HCI_ADM_E_NO_PIPES_AVAILABLE);
 }
@@ -548,7 +546,7 @@ tNFA_HCI_RESPONSE nfa_hciu_add_pipe_to_static_gate(uint8_t local_gate,
   tNFA_HCI_DYN_PIPE* p_pipe;
   uint8_t pipe_index;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
+  LOG(DEBUG) << StringPrintf(
       "nfa_hciu_add_pipe_to_static_gate (%u)  Pipe: 0x%02x  Dest Host: 0x%02x  "
       "Dest Gate: 0x%02x)",
       local_gate, pipe_id, dest_host, dest_gate);
@@ -588,8 +586,7 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_find_active_pipe_by_owner(tNFA_HANDLE app_handle) {
   tNFA_HCI_DYN_PIPE* pp;
   int xx;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("app_handle:0x%x", app_handle);
+  LOG(DEBUG) << StringPrintf("app_handle:0x%x", app_handle);
 
   /* Loop through all pipes looking for the owner */
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
@@ -623,7 +620,7 @@ bool nfa_hciu_check_pipe_between_gates(uint8_t local_gate, uint8_t dest_host,
   tNFA_HCI_DYN_PIPE* pp;
   int xx;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
+  LOG(DEBUG) << StringPrintf(
       "Local gate: 0x%02X, Host[0x%02X] "
       "gate: 0x%02X",
       local_gate, dest_host, dest_gate);
@@ -657,8 +654,7 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_find_pipe_by_owner(tNFA_HANDLE app_handle) {
   tNFA_HCI_DYN_PIPE* pp;
   int xx;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("app_handle:0x%x", app_handle);
+  LOG(DEBUG) << StringPrintf("app_handle:0x%x", app_handle);
 
   /* Loop through all pipes looking for the owner */
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
@@ -688,7 +684,7 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_find_pipe_on_gate(uint8_t gate_id) {
   tNFA_HCI_DYN_PIPE* pp;
   int xx;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf("Gate:0x%x", gate_id);
+  LOG(DEBUG) << StringPrintf("Gate:0x%x", gate_id);
 
   /* Loop through all pipes looking for the owner */
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
@@ -784,7 +780,7 @@ tNFA_HCI_DYN_PIPE* nfa_hciu_find_active_pipe_on_gate(uint8_t gate_id) {
   tNFA_HCI_DYN_PIPE* pp;
   int xx;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf("Gate:0x%x", gate_id);
+  LOG(DEBUG) << StringPrintf("Gate:0x%x", gate_id);
 
   /* Loop through all pipes looking for the owner */
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
@@ -817,15 +813,13 @@ tNFA_HCI_RESPONSE nfa_hciu_release_pipe(uint8_t pipe_id) {
   tNFA_HCI_DYN_PIPE* p_pipe;
   uint8_t pipe_index;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_release_pipe: %u", pipe_id);
+  LOG(DEBUG) << StringPrintf("nfa_hciu_release_pipe: %u", pipe_id);
 
   p_pipe = nfa_hciu_find_pipe_by_pid(pipe_id);
   if (p_pipe == nullptr) return (NFA_HCI_ANY_E_NOK);
 
   if (pipe_id > NFA_HCI_LAST_DYNAMIC_PIPE) {
-    DLOG_IF(INFO, nfc_debug_enabled)
-        << StringPrintf("ignore pipe: %d", pipe_id);
+    LOG(DEBUG) << StringPrintf("ignore pipe: %d", pipe_id);
     return (NFA_HCI_ANY_E_NOK);
   }
 
@@ -867,8 +861,8 @@ void nfa_hciu_remove_all_pipes_from_host(uint8_t host) {
   int xx;
   tNFA_HCI_EVT_DATA evt_data;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_remove_all_pipes_from_host (0x%02x)", host);
+  LOG(DEBUG) << StringPrintf("nfa_hciu_remove_all_pipes_from_host (0x%02x)",
+                             host);
 
   /* Remove all pipes from the specified host connected to all generic gates */
   for (xx = 0, pp = nfa_hci_cb.cfg.dyn_pipes; xx < NFA_HCI_MAX_PIPE_CB;
@@ -908,7 +902,7 @@ tNFA_STATUS nfa_hciu_send_create_pipe_cmd(uint8_t source_gate,
   data[1] = dest_host;
   data[2] = dest_gate;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
+  LOG(DEBUG) << StringPrintf(
       "nfa_hciu_send_create_pipe_cmd source_gate:%d, dest_host:%d, "
       "dest_gate:%d",
       source_gate, dest_host, dest_gate);
@@ -931,11 +925,10 @@ tNFA_STATUS nfa_hciu_send_create_pipe_cmd(uint8_t source_gate,
 tNFA_STATUS nfa_hciu_send_delete_pipe_cmd(uint8_t pipe) {
   tNFA_STATUS status;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_send_delete_pipe_cmd: %d", pipe);
+  LOG(DEBUG) << StringPrintf("nfa_hciu_send_delete_pipe_cmd: %d", pipe);
 
   if (pipe > NFA_HCI_LAST_DYNAMIC_PIPE) {
-    DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf("ignore pipe: %d", pipe);
+    LOG(DEBUG) << StringPrintf("ignore pipe: %d", pipe);
     return (NFA_HCI_ANY_E_NOK);
   }
   nfa_hci_cb.pipe_in_use = pipe;
@@ -962,8 +955,7 @@ tNFA_STATUS nfa_hciu_send_clear_all_pipe_cmd(void) {
   tNFA_STATUS status;
   uint16_t id_ref_data = 0x0102;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("nfa_hciu_send_clear_all_pipe_cmd");
+  LOG(DEBUG) << StringPrintf("nfa_hciu_send_clear_all_pipe_cmd");
 
   status =
       nfa_hciu_send_msg(NFA_HCI_ADMIN_PIPE, NFA_HCI_COMMAND_TYPE,
