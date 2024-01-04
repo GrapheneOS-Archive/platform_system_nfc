@@ -24,10 +24,11 @@
 #ifndef NFC_NCI_HMSGS_H
 #define NFC_NCI_HMSGS_H
 
-#include "nci_defs.h"
-#include "nfc_types.h"
-
 #include <stdbool.h>
+
+#include "nci_defs.h"
+#include "nfc_target.h"
+#include "nfc_types.h"
 
 bool nci_proc_core_rsp(NFC_HDR* p_msg);
 void nci_proc_rf_management_rsp(NFC_HDR* p_msg);

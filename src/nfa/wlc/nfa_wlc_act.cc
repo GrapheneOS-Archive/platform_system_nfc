@@ -21,8 +21,8 @@
  *  This file contains the action functions the NFA_WLC state machine.
  *
  ******************************************************************************/
+#include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <base/logging.h>
 #include <log/log.h>
 #include <string.h>
 
@@ -31,8 +31,6 @@
 #include "nfa_wlc_int.h"
 
 using android::base::StringPrintf;
-
-extern bool nfc_debug_enabled;
 
 /*******************************************************************************
 **
@@ -44,8 +42,8 @@ extern bool nfc_debug_enabled;
 **
 *******************************************************************************/
 bool nfa_wlc_enable(tNFA_WLC_MSG* p_data) {
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("%s; nfa_dm_cb.flags=0x%x", __func__, nfa_dm_cb.flags);
+  LOG(DEBUG) << StringPrintf("%s; nfa_dm_cb.flags=0x%x", __func__,
+                             nfa_dm_cb.flags);
   tNFA_WLC_EVT_DATA wlc_cback_data;
 
   /* Check if NFA is already enabled */
@@ -57,7 +55,7 @@ bool nfa_wlc_enable(tNFA_WLC_MSG* p_data) {
 
     wlc_cback_data.status = NFA_STATUS_OK;
   } else {
-    DLOG_IF(ERROR, nfc_debug_enabled) << StringPrintf(
+    LOG(DEBUG) << StringPrintf(
         "%s; DM not active or enable event pending or DM disabling NFC ",
         __func__);
     wlc_cback_data.status = NFA_STATUS_FAILED;
@@ -80,7 +78,7 @@ bool nfa_wlc_enable(tNFA_WLC_MSG* p_data) {
 **
 *******************************************************************************/
 bool nfa_wlc_start(tNFA_WLC_MSG* p_data) {
-  DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf("%s; ", __func__);
+  LOG(DEBUG) << StringPrintf("%s; ", __func__);
 
   /* If mode is WLC-P Non-Autonomous mode:
    * Support for WLC-P Non-Autonomous RF Interface Extension in CORE_INIT_RSP
@@ -163,10 +161,9 @@ bool nfa_wlc_start(tNFA_WLC_MSG* p_data) {
 **
 *******************************************************************************/
 bool nfa_wlc_non_auto_start_wpt(tNFA_WLC_MSG* p_data) {
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("%s; power_adj_req=0x%x, wpt_time_int=0x%x", __func__,
-                      p_data->non_auto_start_wpt.power_adj_req,
-                      p_data->non_auto_start_wpt.wpt_time_int);
+  LOG(DEBUG) << StringPrintf("%s; power_adj_req=0x%x, wpt_time_int=0x%x",
+                             __func__, p_data->non_auto_start_wpt.power_adj_req,
+                             p_data->non_auto_start_wpt.wpt_time_int);
 
   nfa_dm_start_wireless_power_transfer(p_data->non_auto_start_wpt.power_adj_req,
                                        p_data->non_auto_start_wpt.wpt_time_int);
