@@ -66,11 +66,6 @@ cc_library {
         "gki/common/*.cc",
         "gki/ulinux/*.cc",
     ],
-    required: [
-        // Provide a default libnfc-nci.conf in /system/etc for devices that
-        // does not ship one in /product
-        "libnfc-nci.conf-default",
-    ],
     product_variables: {
         debuggable: {
             cflags: [
@@ -85,8 +80,8 @@ cc_library {
     },
     stl: "libc++_static",
     apex_available: [
-         "//apex_available:platform",
-	 "com.android.nfcservices"
+        "//apex_available:platform",
+        "com.android.nfcservices"
     ],
 }
 
@@ -159,8 +154,8 @@ cc_library {
         },
     },
     apex_available: [
-         "//apex_available:platform",
-	 "com.android.nfcservices"
+        "//apex_available:platform",
+        "com.android.nfcservices"
     ],
 }
 
