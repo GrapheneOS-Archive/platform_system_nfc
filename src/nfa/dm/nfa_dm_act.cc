@@ -1722,6 +1722,40 @@ void nfa_dm_notify_activation_status(tNFA_STATUS status,
 
 /*******************************************************************************
 **
+** Function         nfa_dm_act_change_discovery_tech
+**
+** Description      Process change listening command
+**
+** Returns          TRUE (message buffer to be freed by caller)
+**
+*******************************************************************************/
+bool nfa_dm_act_change_discovery_tech(tNFA_DM_MSG* p_data) {
+  tNFA_CONN_EVT_DATA evt_data;
+
+  DLOG_IF(INFO, nfc_debug_enabled)
+      << StringPrintf("nfa_dm_act_change_discovery_tech ()");
+
+  if (p_data->change_discovery_tech.is_revert_poll)
+    nfa_dm_cb.flags &= ~NFA_DM_FLAGS_POLL_TECH_CHANGED;
+  else
+    nfa_dm_cb.flags |= NFA_DM_FLAGS_POLL_TECH_CHANGED;
+
+  if (p_data->change_discovery_tech.is_revert_listen)
+    nfa_dm_cb.flags &= ~NFA_DM_FLAGS_LISTEN_TECH_CHANGED;
+  else
+    nfa_dm_cb.flags |= NFA_DM_FLAGS_LISTEN_TECH_CHANGED;
+
+  nfa_dm_cb.change_poll_mask = p_data->change_discovery_tech.change_poll_mask;
+  nfa_dm_cb.change_listen_mask =
+      p_data->change_discovery_tech.change_listen_mask;
+  evt_data.status = NFA_STATUS_OK;
+  nfa_dm_conn_cback_event_notify(NFA_LISTEN_ENABLED_EVT, &evt_data);
+
+  return true;
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_dm_nfc_revt_2_str
 **
 ** Description      convert nfc revt to string
