@@ -532,7 +532,7 @@
 
 /* Max number of HCI pipes that can be created for the whole system */
 #ifndef NFA_HCI_MAX_PIPE_CB
-#define NFA_HCI_MAX_PIPE_CB 0x08
+#define NFA_HCI_MAX_PIPE_CB 0x0A
 #endif
 
 /* Timeout for waiting for the response to HCP Command packet */
