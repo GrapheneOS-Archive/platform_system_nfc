@@ -27,6 +27,8 @@
 #include "nfa_api.h"
 #include "nfc_target.h"
 
+#define DEFAULT_PRESENCE_CHECK_RETRY_COUNT 3
+
 /*****************************************************************************
 **  Constants and data types
 *****************************************************************************/
