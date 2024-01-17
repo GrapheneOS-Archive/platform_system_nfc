@@ -21,8 +21,8 @@
  *  NFA interface for NFC wireless charging
  *
  ******************************************************************************/
+#include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <base/logging.h>
 #include <log/log.h>
 #include <string.h>
 
@@ -30,8 +30,6 @@
 #include "nfa_wlc_int.h"
 
 using android::base::StringPrintf;
-
-extern bool nfc_debug_enabled;
 
 /*****************************************************************************
 **  Constants
@@ -60,7 +58,7 @@ extern bool nfc_debug_enabled;
 tNFA_STATUS NFA_WlcEnable(tNFA_WLC_CBACK* p_wlc_cback) {
   tNFA_WLC_MSG* p_msg;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << __func__;
+  LOG(DEBUG) << __func__;
 
   /* Validate parameters */
   if (!p_wlc_cback) {
@@ -103,7 +101,7 @@ tNFA_STATUS NFA_WlcEnable(tNFA_WLC_CBACK* p_wlc_cback) {
 tNFA_STATUS NFA_WlcStart(tNFA_WLC_MODE mode) {
   tNFA_WLC_MSG* p_msg;
 
-  DLOG_IF(INFO, nfc_debug_enabled) << __func__;
+  LOG(DEBUG) << __func__;
 
   if (mode) {
     LOG(ERROR) << StringPrintf("%s; Wireless Charging mode not supported",
@@ -153,9 +151,8 @@ tNFA_STATUS NFA_WlcStart(tNFA_WLC_MODE mode) {
 tNFA_STATUS NFA_WlcStartWPT(uint8_t power_adj_req, uint8_t wpt_time_int) {
   tNFA_WLC_MSG* p_msg;
 
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("%s; power_adj_req: %d, wpt_time_int: %d", __func__,
-                      power_adj_req, wpt_time_int);
+  LOG(DEBUG) << StringPrintf("%s; power_adj_req: %d, wpt_time_int: %d",
+                             __func__, power_adj_req, wpt_time_int);
 
   /* POWER_ADJ_REQ is in the range [0x00..0x14] for request to increase power
    * POWER_ADJ_REQ is in the range [0xF6..0xFF] for request to decrease power
