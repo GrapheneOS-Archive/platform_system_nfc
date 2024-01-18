@@ -21,17 +21,15 @@
  *  This file contains functions that interface with the NFCEEs.
  *
  ******************************************************************************/
-#include <string.h>
-
+#include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <base/logging.h>
-
-#include "nfc_target.h"
+#include <string.h>
 
 #include "gki.h"
 #include "nci_hmsgs.h"
 #include "nfc_api.h"
 #include "nfc_int.h"
+#include "nfc_target.h"
 
 using android::base::StringPrintf;
 
