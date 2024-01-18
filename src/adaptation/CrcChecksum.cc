@@ -17,16 +17,14 @@
  ******************************************************************************/
 #include "CrcChecksum.h"
 
+#include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-#include <base/logging.h>
 #include <fcntl.h>
 #include <unistd.h>
 
 #include <string>
 
 using android::base::StringPrintf;
-
-extern bool nfc_debug_enabled;
 
 static const uint16_t crctab[256] = {
     0x0000, 0xc0c1, 0xc181, 0x0140, 0xc301, 0x03c0, 0x0280, 0xc241, 0xc601,
@@ -91,8 +89,7 @@ uint16_t crcChecksumCompute(const unsigned char* buffer, int bufferLen) {
 **
 *******************************************************************************/
 bool crcChecksumVerifyIntegrity(const char* filename) {
-  DLOG_IF(INFO, nfc_debug_enabled)
-      << StringPrintf("%s: filename=%s", __func__, filename);
+  LOG(DEBUG) << StringPrintf("%s: filename=%s", __func__, filename);
   bool isGood = false;
   int fileStream = open(filename, O_RDONLY);
   if (fileStream >= 0) {
@@ -109,8 +106,7 @@ bool crcChecksumVerifyIntegrity(const char* filename) {
     }
     close(fileStream);
     if ((actualReadCrc == sizeof(checksum)) && (data.size() > 0)) {
-      DLOG_IF(INFO, nfc_debug_enabled)
-          << StringPrintf("%s: data size=%zu", __func__, data.size());
+      LOG(DEBUG) << StringPrintf("%s: data size=%zu", __func__, data.size());
       if (checksum ==
           crcChecksumCompute((const unsigned char*)data.data(), data.size()))
         isGood = true;
