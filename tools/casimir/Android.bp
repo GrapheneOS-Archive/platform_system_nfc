@@ -36,11 +36,13 @@ rust_binary_host {
         ":casimir_rf_packets_rust_gen",
     ],
     rustlibs: [
+        "libenv_logger",
         "libanyhow",
         "libargh",
         "libtokio",
         "libbytes",
         "libfutures",
+        "liblog_rust",
         "libpdl_runtime",
     ],
 }
