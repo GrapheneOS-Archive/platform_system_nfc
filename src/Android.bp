@@ -19,7 +19,6 @@ cc_library {
         "liblog",
         "libdl",
         "libz",
-        "libchrome",
         "libbase",
         // Treble configuration
         "libhidlbase",
@@ -94,7 +93,6 @@ cc_defaults {
         "libcutils",
         "liblog",
         "libbase",
-        "libchrome",
     ],
     cflags: [
         "-DBUILDCFG=1",
