@@ -25,6 +25,7 @@ cc_library {
         "libutils",
         "libbinder_ndk",
         "libstatssocket",
+        "server_configurable_flags",
     ],
     static_libs: [
         "android.hardware.nfc@1.0",
@@ -34,6 +35,7 @@ cc_library {
         "android.hardware.nfc-V1-ndk",
         "libnfcutils",
         "libstatslog_nfc",
+        "libnfc-nci_flags",
     ],
     cflags: [
         "-DDYN_ALLOC=1",
@@ -93,6 +95,9 @@ cc_defaults {
         "libcutils",
         "liblog",
         "libbase",
+    ],
+    shared_libs: [
+	"libnfc-nci_flags",
     ],
     cflags: [
         "-DBUILDCFG=1",
