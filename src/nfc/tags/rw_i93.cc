@@ -4307,8 +4307,8 @@ tNFC_STATUS RW_I93PresenceCheck(void) {
 **
 *****************************************************************************/
 bool RW_I93CheckLegacyProduct(uint8_t ic_manuf, uint8_t pdt_code) {
-  if (!t5t_no_getsysinfo()) return true;
   if (appl_dta_mode_flag) return false;
+  if (!t5t_no_getsysinfo()) return true;
   LOG(DEBUG) << StringPrintf("%s - IC manufacturer:0x%x, Product code:0x%x",
                              __func__, ic_manuf, pdt_code);
 
