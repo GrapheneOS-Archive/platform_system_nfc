@@ -21,7 +21,6 @@
  *  NFA interface for device management
  *
  ******************************************************************************/
-
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
 #include <log/log.h>
@@ -30,6 +29,7 @@
 #include "ndef_utils.h"
 #include "nfa_api.h"
 #include "nfa_ce_int.h"
+#include "nfa_wlc_int.h"
 
 using android::base::StringPrintf;
 
@@ -65,6 +65,7 @@ void NFA_Init(tHAL_NFC_ENTRY* p_hal_entry_tbl) {
     nfa_dm_cb.get_max_ee = p_hal_entry_tbl->get_max_ee;
     nfa_hci_init();
   }
+  nfa_wlc_init();
 
   /* Initialize NFC module */
   NFC_Init(p_hal_entry_tbl);

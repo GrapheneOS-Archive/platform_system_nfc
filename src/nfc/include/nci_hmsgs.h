@@ -69,4 +69,6 @@ uint8_t nci_snd_get_routing_cmd(void);
 uint8_t nci_snd_nfcee_power_link_control(uint8_t nfcee_id, uint8_t pl_config);
 #endif
 
+uint8_t nci_snd_rf_wpt_control_cmd(uint8_t* p_param_tlvs, uint8_t tlv_size);
+
 #endif /* NFC_NCI_MSGS_H */

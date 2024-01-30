@@ -213,6 +213,11 @@ void nci_proc_rf_management_rsp(NFC_HDR* p_msg) {
     case NCI_MSG_RF_ISO_DEP_NAK_PRESENCE:
       nfc_ncif_proc_isodep_nak_presence_check_status(*pp, false);
       break;
+
+    case NCI_MSG_WPT_START:
+      nfc_ncif_rf_management_status(NFC_WPT_START_DEVT, *pp);
+      break;
+
     default:
       LOG(ERROR) << StringPrintf("unknown opcode:0x%x", op_code);
       break;
@@ -294,6 +299,11 @@ void nci_proc_rf_management_ntf(NFC_HDR* p_msg) {
       }
       nfc_ncif_proc_isodep_nak_presence_check_status(*pp, true);
       break;
+
+    case NCI_MSG_WPT_START:
+      nfc_ncif_proc_charging_status(pp, len);
+      break;
+
     default:
       LOG(ERROR) << StringPrintf("unknown opcode:0x%x", op_code);
       break;

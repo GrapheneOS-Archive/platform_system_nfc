@@ -34,6 +34,57 @@
 
 /*******************************************************************************
 **
+** Function         nci_snd_tlv_parameter_generic_cmd
+**
+** Description      compose and send RF Management RF TLV Parameter
+**                  generic command to command queue
+**
+** Returns          status
+**
+*******************************************************************************/
+static uint8_t nci_snd_tlv_parameter_generic_cmd(uint8_t oid,
+                                                 uint8_t* p_param_tlvs,
+                                                 uint8_t tlv_size) {
+  NFC_HDR* p;
+  uint8_t* pp;
+  uint8_t num = 0, ulen, len, *pt;
+
+  p = NCI_GET_CMD_BUF(tlv_size + 1);
+  if (p == nullptr) return (NCI_STATUS_FAILED);
+
+  p->event = BT_EVT_TO_NFC_NCI;
+  p->len = NCI_MSG_HDR_SIZE + tlv_size + 1;
+  p->offset = NCI_MSG_OFFSET_SIZE;
+  pp = (uint8_t*)(p + 1) + p->offset;
+
+  NCI_MSG_BLD_HDR0(pp, NCI_MT_CMD, NCI_GID_RF_MANAGE);
+  NCI_MSG_BLD_HDR1(pp, oid);
+  UINT8_TO_STREAM(pp, (uint8_t)(tlv_size + 1));
+  len = tlv_size;
+  pt = p_param_tlvs;
+  while (len > 1) {
+    len -= 2;
+    pt++;
+    num++;
+    ulen = *pt++;
+    pt += ulen;
+    if (len >= ulen) {
+      len -= ulen;
+    } else {
+      GKI_freebuf(p);
+      return NCI_STATUS_FAILED;
+    }
+  }
+
+  UINT8_TO_STREAM(pp, num);
+  ARRAY_TO_STREAM(pp, p_param_tlvs, tlv_size);
+  nfc_ncif_send_cmd(p);
+
+  return (NCI_STATUS_OK);
+}
+
+/*******************************************************************************
+**
 ** Function         nci_snd_core_reset
 **
 ** Description      compose and send CORE RESET command to command queue
@@ -426,6 +477,21 @@ uint8_t nci_snd_discover_select_cmd(uint8_t rf_disc_id, uint8_t protocol,
 
 /*******************************************************************************
 **
+** Function         nci_snd_rf_wpt_control_cmd
+**
+** Description      compose and send RF Management WPT_START command
+**                  to command queue
+**
+** Returns          status
+**
+*******************************************************************************/
+uint8_t nci_snd_rf_wpt_control_cmd(uint8_t* p_param_tlvs, uint8_t tlv_size) {
+  return nci_snd_tlv_parameter_generic_cmd(NCI_MSG_WPT_START, p_param_tlvs,
+                                           tlv_size);
+}
+
+/*******************************************************************************
+**
 ** Function         nci_snd_deactivate_cmd
 **
 ** Description      compose and send RF Management DEACTIVATE command
@@ -545,42 +611,8 @@ uint8_t nci_snd_t3t_polling(uint16_t system_code, uint8_t rc, uint8_t tsn) {
 **
 *******************************************************************************/
 uint8_t nci_snd_parameter_update_cmd(uint8_t* p_param_tlvs, uint8_t tlv_size) {
-  NFC_HDR* p;
-  uint8_t* pp;
-  uint8_t num = 0, ulen, len, *pt;
-
-  p = NCI_GET_CMD_BUF(tlv_size + 1);
-  if (p == nullptr) return (NCI_STATUS_FAILED);
-
-  p->event = BT_EVT_TO_NFC_NCI;
-  p->len = NCI_MSG_HDR_SIZE + tlv_size + 1;
-  p->offset = NCI_MSG_OFFSET_SIZE;
-  pp = (uint8_t*)(p + 1) + p->offset;
-
-  NCI_MSG_BLD_HDR0(pp, NCI_MT_CMD, NCI_GID_RF_MANAGE);
-  NCI_MSG_BLD_HDR1(pp, NCI_MSG_RF_PARAMETER_UPDATE);
-  UINT8_TO_STREAM(pp, (uint8_t)(tlv_size + 1));
-  len = tlv_size;
-  pt = p_param_tlvs;
-  while (len > 1) {
-    len -= 2;
-    ++pt;
-    ++num;
-    ulen = *pt++;
-    pt += ulen;
-    if (len >= ulen) {
-      len -= ulen;
-    } else {
-      GKI_freebuf(p);
-      return NCI_STATUS_FAILED;
-    }
-  }
-
-  UINT8_TO_STREAM(pp, num);
-  ARRAY_TO_STREAM(pp, p_param_tlvs, tlv_size);
-  nfc_ncif_send_cmd(p);
-
-  return (NCI_STATUS_OK);
+  return nci_snd_tlv_parameter_generic_cmd(NCI_MSG_RF_PARAMETER_UPDATE,
+                                           p_param_tlvs, tlv_size);
 }
 
 /*******************************************************************************

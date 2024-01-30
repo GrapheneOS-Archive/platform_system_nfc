@@ -35,7 +35,7 @@
 #include "nfa_ee_int.h"
 #endif
 #include "nfa_rw_int.h"
-
+#include "nfa_wlc_int.h"
 #include "nfc_int.h"
 
 using android::base::StringPrintf;
@@ -769,6 +769,16 @@ static void nfa_dm_disc_discovery_cback(tNFC_DISCOVER_EVT event,
       } else
         dm_disc_event = NFA_DM_RF_DEACTIVATE_RSP;
       break;
+    case NFC_WPT_START_DEVT:
+      dm_disc_event = NFA_DM_WPT_START_RSP;
+      break;
+    case NFC_WPT_RESULT_DEVT:
+      nfa_wlc_cb.flags &= ~NFA_WLC_FLAGS_WPT_NTF_PENDING;
+
+      tNFA_WLC_EVT_DATA wlc_cback_data;
+      wlc_cback_data.wpt_end_cdt = p_data->wpt_result;
+      nfa_wlc_event_notify(NFA_WLC_CHARGING_RESULT_EVT, &wlc_cback_data);
+      return;
     default:
       LOG(ERROR) << StringPrintf("Unexpected event");
       return;
@@ -1151,6 +1161,47 @@ static void nfa_dm_notify_discovery(tNFA_DM_RF_DISC_DATA* p_data) {
          sizeof(tNFC_RESULT_DEVT));
 
   nfa_dm_conn_cback_event_notify(NFA_DISC_RESULT_EVT, &conn_evt);
+}
+
+/*******************************************************************************
+**
+** Function         nfa_dm_start_wireless_power_transfer
+**
+** Description      Send WPT request to NFCC
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfa_dm_start_wireless_power_transfer(uint8_t power_adj_req,
+                                          uint8_t wpt_time_int) {
+  tNFA_DM_DISC_WPT_START_PARAMS start_wpt_params;
+
+  LOG(DEBUG) << StringPrintf("%s; power_adj_req: 0x%X, wpt_time_int: 0x%X",
+                             __func__, power_adj_req, wpt_time_int);
+
+  if ((nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_POLL_ACTIVE) &&
+      (nfa_dm_cb.flags & NFA_DM_FLAGS_RF_EXT_ACTIVE)) {
+    /* state is OK: notify the status when the response is received from NFCC */
+    start_wpt_params.power_adj_req = power_adj_req;
+    start_wpt_params.wpt_time_int = wpt_time_int;
+
+    nfa_dm_cb.disc_cb.disc_flags |= NFA_DM_DISC_FLAGS_NOTIFY;
+    tNFA_DM_RF_DISC_DATA nfa_dm_wpt_start_data;
+    nfa_dm_wpt_start_data.start_wpt = start_wpt_params;
+
+    nfa_dm_disc_sm_execute(NFA_DM_WPT_START_CMD, &nfa_dm_wpt_start_data);
+  } else {
+    nfa_dm_cb.flags &= ~NFA_DM_FLAGS_ENABLE_WLCP_PEND;
+
+    tNFA_WLC_EVT_DATA wlc_cback_data;
+    /* Wrong state: notify failed status right away */
+    wlc_cback_data.status = NFA_STATUS_FAILED;
+
+    LOG(DEBUG) << StringPrintf("%s; wlc_cback_data.status: 0x%X", __func__,
+                               wlc_cback_data.status);
+
+    nfa_wlc_event_notify(NFA_WLC_START_WPT_RESULT_EVT, &wlc_cback_data);
+  }
 }
 
 /*******************************************************************************
@@ -2301,6 +2352,86 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
       }
       break;
 
+    case NFA_DM_WPT_START_CMD:
+      if (nfa_dm_cb.flags & NFA_DM_FLAGS_WLCP_ENABLED) {
+        if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP)) {
+          if (!(nfa_wlc_cb.flags & NFA_WLC_FLAGS_WPT_NTF_PENDING)) {
+            /* Prepare NCI message with TLV format */
+            uint8_t tlvs[NCI_WPT_START_CMD_SIZE];
+            uint8_t* p = tlvs;
+
+            /* Number of Parameters */
+            // TODO: add to check SEMANTIC_ERROR (malformed command), increase
+            // size
+            // UINT8_TO_STREAM(p, NCI_WPT_START_CMD_PARAM_SIZE);
+
+            /* POWER_ADJ_REQ */
+            // TODO: field not present (status OK), out of range, bits 1b for
+            // testing
+            // TODO: use RFU value for type
+            UINT8_TO_STREAM(p, NCI_WPT_POWER_ADJ_REQ_TYPE);
+            UINT8_TO_STREAM(p, 1);
+            UINT8_TO_STREAM(p, p_data->start_wpt.power_adj_req);
+
+            /* WPT_TIME_INT */
+            // TODO: field not present (semantic error), out of range, bits 1b
+            // for testing
+            // TODO: use RFU value for type
+            UINT8_TO_STREAM(p, NCI_WPT_TIME_INT_TYPE);
+            UINT8_TO_STREAM(p, 1);
+            UINT8_TO_STREAM(p, p_data->start_wpt.wpt_time_int);
+
+            nfa_dm_cb.disc_cb.disc_flags |= NFA_DM_DISC_FLAGS_NOTIFY;
+
+            NFC_StartPowerTransfert(tlvs, NCI_WPT_START_CMD_SIZE);
+            break;
+          } else {
+            LOG(ERROR) << StringPrintf(
+                "%s; Unexpected WPT_START_CMD, \
+                power transfer phase already started",
+                __func__);
+          }
+        } else {
+          LOG(DEBUG) << StringPrintf(
+              "%s; Unexpected WPT_START_CMD, \
+              already waiting for RSP of a previous command",
+              __func__);
+        }
+      } else {
+        LOG(DEBUG) << StringPrintf(
+            "%s; Unexpected WPT_START_CMD, \
+            WLC-P not enabled",
+            __func__);
+      }
+
+      nfa_dm_cb.flags &= ~NFA_DM_FLAGS_WLCP_ENABLED;
+      tNFA_WLC_EVT_DATA wlc_cback_data;
+      /* Wrong state: notify failed status right away */
+      wlc_cback_data.status = NFA_STATUS_FAILED;
+
+      nfa_wlc_event_notify(NFA_WLC_START_WPT_RESULT_EVT, &wlc_cback_data);
+      break;
+
+    case NFA_DM_WPT_START_RSP:
+      if (nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_NOTIFY) {
+        nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_NOTIFY;
+
+        tNFA_WLC_EVT_DATA wlc_cback_data;
+        if (p_data->nfc_discover.status == NFC_STATUS_OK) {
+          wlc_cback_data.status = NFA_STATUS_OK;
+          nfa_wlc_cb.flags |= NFA_WLC_FLAGS_WPT_NTF_PENDING;
+          LOG(DEBUG) << StringPrintf("%s; WPT started", __func__);
+        } else {
+          wlc_cback_data.status = NFA_STATUS_FAILED;
+        }
+        nfa_wlc_event_notify(NFA_WLC_START_WPT_RESULT_EVT, &wlc_cback_data);
+      }
+      LOG(DEBUG) << StringPrintf(
+          "%s; nfa_dm_cb.flags=0x%x, \
+          nfa_wlc_cb.flags=0x%x",
+          __func__, nfa_dm_cb.flags, nfa_wlc_cb.flags);
+      break;
+
     default:
       LOG(ERROR) << StringPrintf("Unexpected discovery event");
       break;
@@ -2877,6 +3008,10 @@ static std::string nfa_dm_disc_event_2_str(uint8_t event) {
       return "NFA_DM_LP_LISTEN_CMD";
     case NFA_DM_CORE_INTF_ERROR_NTF:
       return "INTF_ERROR_NTF";
+    case NFA_DM_WPT_START_CMD:
+      return "WPT_START_CMD";
+    case NFA_DM_WPT_START_RSP:
+      return "WPT_START_RSP";
     default:
       return "Unknown";
   }
