@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_fwk_nfc",
     // See: http://go/android-license-faq
     // A large-scale-change added 'default_applicable_licenses' to import
     // all of the 'license_kinds' from "system_nfc_license"
@@ -64,14 +65,14 @@ rust_library {
     proc_macros: ["libnum_derive"],
     target: {
         android: {
-                whole_static_libs: ["libnfc_hidl_hal_cxx"],
-                shared_libs: [
-                    "android.hardware.nfc@1.0",
-                    "android.hardware.nfc@1.1",
-                    "android.hardware.nfc@1.2",
-                    "libhidlbase",
-                    "libutils",
-                ],
+            whole_static_libs: ["libnfc_hidl_hal_cxx"],
+            shared_libs: [
+                "android.hardware.nfc@1.0",
+                "android.hardware.nfc@1.1",
+                "android.hardware.nfc@1.2",
+                "libhidlbase",
+                "libutils",
+            ],
         },
     },
 }
@@ -94,10 +95,16 @@ genrule {
 
 cc_library_static {
     name: "libnfc_hidl_hal_cxx",
-    defaults: ["rust_static_cc_lib_defaults", "nfc_ffi_defaults"],
+    defaults: [
+        "rust_static_cc_lib_defaults",
+        "nfc_ffi_defaults",
+    ],
     srcs: ["hal/ffi/hidl.cc"],
     local_include_dirs: ["hal/ffi"],
-    generated_headers: ["libnfc_hidl_hal_bridge_header", "cxx-bridge-header"],
+    generated_headers: [
+        "libnfc_hidl_hal_bridge_header",
+        "cxx-bridge-header",
+    ],
     generated_sources: ["libnfc_hidl_hal_bridge_code"],
     shared_libs: [
         "android.hardware.nfc@1.0",

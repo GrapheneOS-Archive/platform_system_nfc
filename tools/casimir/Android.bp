@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package {
+    default_team: "trendy_team_fwk_nfc",
+}
+
 genrule {
     name: "casimir_nci_packets_rust_gen",
     defaults: ["pdl_rust_generator_defaults"],
