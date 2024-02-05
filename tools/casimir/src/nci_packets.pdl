@@ -75,6 +75,7 @@ enum ProprietaryOpcodeId : 6 {
 enum AndroidSubOpcodeId : 8 {
   PASSIVE_OBSERVER_MODE = 0x2,
   POLLING_FRAME = 0x3,
+  QUERY_PASSIVE_OBSERVER_MODE = 0x4,
 }
 
 enum Status : 8 {
@@ -838,6 +839,14 @@ packet AndroidPassiveObserverModeCommand : AndroidPacket(mt = COMMAND, android_s
 
 packet AndroidPassiveObserverModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = PASSIVE_OBSERVER_MODE) {
   status: Status,
+}
+
+packet AndroidQueryPassiveObserverModeCommand : AndroidPacket(mt = COMMAND, android_sub_oid = QUERY_PASSIVE_OBSERVER_MODE) {
+}
+
+packet AndroidQueryPassiveObserverModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = QUERY_PASSIVE_OBSERVER_MODE) {
+  status: Status,
+  passive_observer_mode: PassiveObserverMode,
 }
 
 enum PollingFrameType : 8 {
