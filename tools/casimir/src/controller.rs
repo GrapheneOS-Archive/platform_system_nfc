@@ -1329,6 +1329,21 @@ impl Controller {
         Ok(())
     }
 
+    async fn android_query_passive_observer_mode(
+        &self,
+        _cmd: nci::AndroidQueryPassiveObserverModeCommand,
+    ) -> Result<()> {
+        info!("[{}] ANDROID_QUERY_PASSIVE_OBSERVER_MODE_CMD", self.id);
+
+        let state = self.state.lock().await;
+        self.send_control(nci::AndroidQueryPassiveObserverModeResponseBuilder {
+            status: nci::Status::Ok,
+            passive_observer_mode: state.passive_observer_mode,
+        })
+        .await?;
+        Ok(())
+    }
+
     async fn receive_command(&self, packet: nci::ControlPacket) -> Result<()> {
         use nci::AndroidPacketChild::*;
         use nci::ControlPacketChild::*;
@@ -1366,6 +1381,9 @@ impl Controller {
                 AndroidPacket(packet) => match packet.specialize() {
                     AndroidPassiveObserverModeCommand(cmd) => {
                         self.android_passive_observer_mode(cmd).await
+                    }
+                    AndroidQueryPassiveObserverModeCommand(cmd) => {
+                        self.android_query_passive_observer_mode(cmd).await
                     }
                     _ => {
                         unimplemented!("unsupported android oid {:?}", packet.get_android_sub_oid())

@@ -231,6 +231,7 @@
 /* Android Opcodes */
 #define NCI_ANDROID_POWER_SAVING 0x1
 #define NCI_ANDROID_PASSIVE_OBSERVER 0x2
+#define NCI_QUERY_ANDROID_PASSIVE_OBSERVER 0x4
 
 /* Android Power Saving Params */
 #define NCI_ANDROID_POWER_SAVING_PARAM_SIZE 0x2
@@ -239,6 +240,7 @@
 
 /* Android Passive Observer Settings */
 #define NCI_ANDROID_PASSIVE_OBSERVER_PARAM_SIZE 0x2
+#define NCI_QUERY_ANDROID_PASSIVE_OBSERVER_PARAM_SIZE 0x1
 #define NCI_ANDROID_PASSIVE_OBSERVER_PARAM_DISABLE 0x0
 #define NCI_ANDROID_PASSIVE_OBSERVER_PARAM_ENABLE 0x1
 /**********************************************
