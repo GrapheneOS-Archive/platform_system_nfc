@@ -16,7 +16,7 @@
 //! This connects to "rootcanal" which provides a simulated
 //! Nfc chip as well as a simulated environment.
 
-use log::{debug, Level};
+use log::{debug, LevelFilter};
 use logger::{self, Config};
 use nfc_rnci::api::NciApi;
 
@@ -32,7 +32,7 @@ pub fn nfc_callback(kind: u16, val: &[u8]) {
 async fn main() -> Result<()> {
     let set_tlvs: [u8; 10] = [3, 0xa1, 1, 0x1e, 0xa2, 1, 0x19, 0x80, 1, 0x01];
     let get_tlvs: [u8; 3] = [2, 0x52, 0x80];
-    logger::init(Config::default().with_tag_on_device("lnfc").with_min_level(Level::Trace));
+    logger::init(Config::default().with_tag_on_device("lnfc").with_max_level(LevelFilter::Trace));
 
     let mut nci = NciApi::new();
     nci.nfc_enable(nfc_callback).await;
