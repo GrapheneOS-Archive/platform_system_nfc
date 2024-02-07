@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_fwk_nfc",
     // See: http://go/android-license-faq
     // A large-scale-change added 'default_applicable_licenses' to import
     // all of the 'license_kinds' from "system_nfc_license"
@@ -82,7 +83,7 @@ cc_library {
     stl: "libc++_static",
     apex_available: [
         "//apex_available:platform",
-        "com.android.nfcservices"
+        "com.android.nfcservices",
     ],
 }
 
@@ -97,7 +98,7 @@ cc_defaults {
         "libbase",
     ],
     shared_libs: [
-	"libnfc-nci_flags",
+        "libnfc-nci_flags",
     ],
     cflags: [
         "-DBUILDCFG=1",
@@ -111,7 +112,7 @@ cc_defaults {
     product_variables: {
         debuggable: {
             cflags: [
-                "-DDCHECK_ALWAYS_ON"
+                "-DDCHECK_ALWAYS_ON",
             ],
         },
     },
@@ -124,7 +125,7 @@ cc_defaults {
         "fuzzers/inc",
     ],
     fuzz_config: {
-       cc: [
+        cc: [
             "android-security-assurance-redteam@google.com",
             "zachoverflow@google.com",
             "jackcwyu@google.com",
@@ -155,7 +156,7 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
-        "com.android.nfcservices"
+        "com.android.nfcservices",
     ],
 }
 
@@ -181,7 +182,7 @@ cc_fuzz {
     name: "nfc_nci_fuzzer",
     defaults: ["nfc_fuzzer_defaults"],
     fuzzing_frameworks: {
-      afl: false,
+        afl: false,
     },
     srcs: [
         "nfc/nci/*.cc",
@@ -194,14 +195,14 @@ cc_fuzz {
     ],
     shared_libs: [
         "libstatslog_nfc",
-    ]
+    ],
 }
 
 cc_fuzz {
     name: "nfc_rw_fuzzer",
     defaults: ["nfc_fuzzer_defaults"],
     fuzzing_frameworks: {
-      afl: false,
+        afl: false,
     },
     srcs: [
         "nfc/tags/rw_*.cc",
@@ -217,7 +218,7 @@ cc_fuzz {
     name: "nfc_ce_fuzzer",
     defaults: ["nfc_fuzzer_defaults"],
     fuzzing_frameworks: {
-      afl: false,
+        afl: false,
     },
     srcs: [
         "nfc/tags/ce_*.cc",
@@ -233,7 +234,7 @@ cc_fuzz {
     name: "nfc_ndef_fuzzer",
     defaults: ["nfc_fuzzer_defaults"],
     fuzzing_frameworks: {
-      afl: false,
+        afl: false,
     },
     srcs: [
         "nfa/dm/nfa_dm_ndef.cc",
@@ -261,7 +262,7 @@ cc_fuzz {
     name: "nfc_integration_fuzzer",
     defaults: ["nfc_fuzzer_defaults"],
     fuzzing_frameworks: {
-      afl: false,
+        afl: false,
     },
     srcs: [
         "adaptation/debug_nfcsnoop.cc",
@@ -296,7 +297,7 @@ cc_fuzz {
         "libprotobuf-cpp-full",
         "libstatslog_nfc",
         "libz",
-    ]
+    ],
 }
 
 genrule {
@@ -310,7 +311,10 @@ rust_library {
     name: "libnfc_packets",
     defaults: ["nfc_rust_defaults"],
     crate_name: "nfc_packets",
-    srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
+    srcs: [
+        "rust/packets/lib.rs",
+        ":NfcGeneratedPackets_rust",
+    ],
     host_supported: true,
     rustlibs: [
         "libbytes",
@@ -322,7 +326,10 @@ rust_library {
 rust_test_host {
     name: "libnfc_packets_test",
     defaults: ["nfc_rust_defaults"],
-    srcs: ["rust/packets/lib.rs", ":NfcGeneratedPackets_rust"],
+    srcs: [
+        "rust/packets/lib.rs",
+        ":NfcGeneratedPackets_rust",
+    ],
     test_suites: ["general-tests"],
     rustlibs: [
         "libbytes",
