@@ -16,7 +16,6 @@
 use crate::internal::InnerHal;
 #[allow(unused)]
 use crate::{is_control_packet, Hal, HalEvent, HalEventRegistry, HalEventStatus, Result};
-use lazy_static::lazy_static;
 use log::{debug, error};
 use nfc_packets::nci::{DataPacket, NciPacket};
 use pdl_runtime::Packet;
@@ -117,9 +116,7 @@ struct Callbacks {
     in_data_tx: UnboundedSender<DataPacket>,
 }
 
-lazy_static! {
-    static ref CALLBACKS: Mutex<Option<Callbacks>> = Mutex::new(None);
-}
+static CALLBACKS: Mutex<Option<Callbacks>> = Mutex::new(None);
 
 fn on_event(evt: ffi::NfcEvent, status: ffi::NfcStatus) {
     debug!("got event: {:?} with status {:?}", evt, status);
