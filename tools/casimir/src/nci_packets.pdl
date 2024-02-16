@@ -864,6 +864,7 @@ enum PollingFrameType : 8 {
 
 struct PollingFrame {
   type: PollingFrameType,
+  flags: 8,
   _size_(data): 8,
   timestamp: 32,
   gain: 8,
