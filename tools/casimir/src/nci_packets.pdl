@@ -73,9 +73,9 @@ enum ProprietaryOpcodeId : 6 {
 }
 
 enum AndroidSubOpcodeId : 8 {
-  PASSIVE_OBSERVER_MODE = 0x2,
+  PASSIVE_OBSERVE_MODE = 0x2,
   POLLING_FRAME = 0x3,
-  QUERY_PASSIVE_OBSERVER_MODE = 0x4,
+  QUERY_PASSIVE_OBSERVE_MODE = 0x4,
 }
 
 enum Status : 8 {
@@ -828,25 +828,25 @@ packet AndroidPacket : ProprietaryPacket (oid = ANDROID) {
   _payload_,
 }
 
-enum PassiveObserverMode : 8 {
+enum PassiveObserveMode : 8 {
   DISABLE = 0x0,
   ENABLE = 0x1,
 }
 
-packet AndroidPassiveObserverModeCommand : AndroidPacket(mt = COMMAND, android_sub_oid = PASSIVE_OBSERVER_MODE) {
-  passive_observer_mode: PassiveObserverMode,
+packet AndroidPassiveObserveModeCommand : AndroidPacket(mt = COMMAND, android_sub_oid = PASSIVE_OBSERVE_MODE) {
+  passive_observe_mode: PassiveObserveMode,
 }
 
-packet AndroidPassiveObserverModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = PASSIVE_OBSERVER_MODE) {
+packet AndroidPassiveObserveModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = PASSIVE_OBSERVE_MODE) {
   status: Status,
 }
 
-packet AndroidQueryPassiveObserverModeCommand : AndroidPacket(mt = COMMAND, android_sub_oid = QUERY_PASSIVE_OBSERVER_MODE) {
+packet AndroidQueryPassiveObserveModeCommand : AndroidPacket(mt = COMMAND, android_sub_oid = QUERY_PASSIVE_OBSERVE_MODE) {
 }
 
-packet AndroidQueryPassiveObserverModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = QUERY_PASSIVE_OBSERVER_MODE) {
+packet AndroidQueryPassiveObserveModeResponse : AndroidPacket(mt = RESPONSE, android_sub_oid = QUERY_PASSIVE_OBSERVE_MODE) {
   status: Status,
-  passive_observer_mode: PassiveObserverMode,
+  passive_observe_mode: PassiveObserveMode,
 }
 
 enum PollingFrameType : 8 {
@@ -864,6 +864,7 @@ enum PollingFrameType : 8 {
 
 struct PollingFrame {
   type: PollingFrameType,
+  flags: 8,
   _size_(data): 8,
   timestamp: 32,
   gain: 8,
