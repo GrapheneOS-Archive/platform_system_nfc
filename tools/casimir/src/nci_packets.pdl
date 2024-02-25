@@ -73,6 +73,7 @@ enum ProprietaryOpcodeId : 6 {
 }
 
 enum AndroidSubOpcodeId : 8 {
+  GET_CAPS = 0x0,
   PASSIVE_OBSERVE_MODE = 0x2,
   POLLING_FRAME = 0x3,
   QUERY_PASSIVE_OBSERVE_MODE = 0x4,
@@ -826,6 +827,28 @@ packet ProprietaryPacket : ControlPacket (gid = PROPRIETARY) {
 packet AndroidPacket : ProprietaryPacket (oid = ANDROID) {
   android_sub_oid: AndroidSubOpcodeId,
   _payload_,
+}
+
+packet AndroidGetCapsCommand : AndroidPacket (mt = COMMAND, android_sub_oid = GET_CAPS) {
+}
+
+enum CapTlvType: 8 {
+  PASSIVE_OBSERVER_MODE = 0x00,
+  POLLING_FRAME_NOTIFICATION = 0x01,
+  POWER_SAVING_MODE = 0x02,
+}
+
+struct CapTlv {
+  t: CapTlvType,
+  _count_(v): 8,
+  v: 8[],
+}
+
+packet AndroidGetCapsResponse : AndroidPacket (mt = RESPONSE, android_sub_oid = GET_CAPS) {
+  status: Status,
+  android_version: 16,
+  _count_(tlvs): 8,
+  tlvs: CapTlv[],
 }
 
 enum PassiveObserveMode : 8 {

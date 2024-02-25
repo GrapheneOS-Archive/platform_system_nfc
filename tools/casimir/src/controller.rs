@@ -1322,6 +1322,21 @@ impl Controller {
         Ok(())
     }
 
+    async fn android_get_caps(&self, _cmd: nci::AndroidGetCapsCommand) -> Result<()> {
+        info!("[{}] ANDROID_GET_CAPS_CMD", self.id);
+        let cap_tlvs = vec![
+            nci::CapTlv { t: nci::CapTlvType::PassiveObserverMode, v: vec![1] },
+            nci::CapTlv { t: nci::CapTlvType::PollingFrameNotification, v: vec![1] },
+        ];
+        self.send_control(nci::AndroidGetCapsResponseBuilder {
+            status: nci::Status::Ok,
+            android_version: 0,
+            tlvs: cap_tlvs,
+        })
+        .await?;
+        Ok(())
+    }
+
     async fn android_passive_observe_mode(
         &self,
         cmd: nci::AndroidPassiveObserveModeCommand,
@@ -1388,6 +1403,7 @@ impl Controller {
             },
             ProprietaryPacket(packet) => match packet.specialize() {
                 AndroidPacket(packet) => match packet.specialize() {
+                    AndroidGetCapsCommand(cmd) => self.android_get_caps(cmd).await,
                     AndroidPassiveObserveModeCommand(cmd) => {
                         self.android_passive_observe_mode(cmd).await
                     }
