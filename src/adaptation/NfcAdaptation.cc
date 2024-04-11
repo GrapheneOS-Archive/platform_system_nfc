@@ -128,6 +128,13 @@ void initializeNciResetTypeFlag() {
   LOG(DEBUG) << StringPrintf("%s: nfc_nci_reset_type=%u", __func__,
                              nfc_nci_reset_type);
 }
+
+// Abort nfc service when AIDL process died.
+void HalAidlBinderDied(void* /* cookie */) {
+  LOG(ERROR) << __func__ << "INfc aidl hal died, exiting procces to restart";
+  exit(0);
+}
+
 }  // namespace
 
 class NfcClientCallback : public INfcClientCallback {
@@ -272,7 +279,7 @@ class NfcAidlClientCallback
 NfcAdaptation::NfcAdaptation() {
   memset(&mHalEntryFuncs, 0, sizeof(mHalEntryFuncs));
   mDeathRecipient = ::ndk::ScopedAIBinder_DeathRecipient(
-      AIBinder_DeathRecipient_new(NfcAdaptation::HalAidlBinderDied));
+      AIBinder_DeathRecipient_new(HalAidlBinderDied));
 }
 
 /*******************************************************************************
@@ -561,7 +568,7 @@ void NfcAdaptation::Finalize() {
 
   if (mAidlHal != nullptr) {
     AIBinder_unlinkToDeath(mAidlHal->asBinder().get(), mDeathRecipient.get(),
-                           this);
+                           nullptr);
   } else if (mHal != nullptr) {
     mNfcHalDeathRecipient->finalize();
   }
@@ -583,7 +590,7 @@ void NfcAdaptation::DeviceShutdown() {
   if (mAidlHal != nullptr) {
     mAidlHal->close(NfcCloseType::HOST_SWITCHED_OFF);
     AIBinder_unlinkToDeath(mAidlHal->asBinder().get(), mDeathRecipient.get(),
-                           this);
+                           nullptr);
     mAidlHal = nullptr;
   } else {
     if (mHal_1_2 != nullptr) {
@@ -717,7 +724,7 @@ void NfcAdaptation::InitializeHalDeviceContext() {
     if (mAidlHal != nullptr) {
       use_aidl = true;
       AIBinder_linkToDeath(mAidlHal->asBinder().get(), mDeathRecipient.get(),
-                           this /* cookie */);
+                           nullptr /* cookie */);
       mHal = mHal_1_1 = mHal_1_2 = nullptr;
       LOG(INFO) << StringPrintf("%s: INfcAidl::fromBinder returned", func);
     }
@@ -1025,31 +1032,6 @@ void NfcAdaptation::HalDownloadFirmwareDataCallback(__attribute__((unused))
                                                     uint16_t data_len,
                                                     __attribute__((unused))
                                                     uint8_t* p_data) {}
-
-/*******************************************************************************
-**
-** Function:    NfcAdaptation::HalAidlBinderDiedImpl
-**
-** Description: Abort nfc service when AIDL process died.
-**
-** Returns:     None.
-**
-*******************************************************************************/
-void NfcAdaptation::HalAidlBinderDiedImpl() {
-  LOG(WARNING) << __func__ << "INfc aidl hal died, resetting the state";
-  if (mAidlHal != nullptr) {
-    AIBinder_unlinkToDeath(mAidlHal->asBinder().get(), mDeathRecipient.get(),
-                           this);
-    mAidlHal = nullptr;
-  }
-  exit(0);
-}
-
-// static
-void NfcAdaptation::HalAidlBinderDied(void* cookie) {
-  auto thiz = static_cast<NfcAdaptation*>(cookie);
-  thiz->HalAidlBinderDiedImpl();
-}
 
 /*******************************************************************************
 **
